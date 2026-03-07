@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkForce Connect — Worker Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+</head>
+<body>
+
+  <!-- ═══════ NAVBAR ═══════ -->
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="worker-dashboard.html" class="navbar-brand">
+        <span class="brand-icon">⚡</span>
+        WorkForce Connect
+      </a>
+      <div class="navbar-right">
+        <!-- Availability Toggle -->
+        <div class="availability-toggle" id="avail-toggle">
+          <div class="toggle-track" id="avail-track">
+            <div class="toggle-thumb"></div>
+          </div>
+          <span class="toggle-label" id="avail-label">Available</span>
+        </div>
+
+        <!-- Profile Dropdown -->
+        <div class="profile-dropdown-wrapper">
+          <img class="navbar-avatar" id="nav-avatar" src="" alt="Profile" tabindex="0">
+          <div class="profile-dropdown" id="profile-dropdown">
+            <div class="profile-dropdown-header">
+              <div class="dd-name" id="dd-name"></div>
+              <div class="dd-email" id="dd-email"></div>
+            </div>
+            <button class="profile-dropdown-item" id="btn-edit-profile">✏️ Edit Profile</button>
+            <button class="profile-dropdown-item danger" id="btn-logout-trigger">🚪 Logout</button>
+            <div class="logout-confirm" id="logout-confirm">
+              <p>Are you sure you want to logout?</p>
+              <div class="logout-confirm-btns">
+                <button class="btn btn-danger btn-sm" id="btn-logout-yes">Yes, Logout</button>
+                <button class="btn btn-ghost btn-sm" id="btn-logout-cancel">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="hamburger" id="hamburger" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════ PAGE CONTENT ═══════ -->
+  <main class="page-content">
+    <div class="container">
+
+      <!-- Stats Bar -->
+      <div class="stats-bar" id="stats-bar" style="margin-top:var(--sp-lg);">
+        <div class="stat-card anim-fade-in-up stagger-1">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-value" id="stat-rating">0</div>
+          <div class="stat-label">Average Rating</div>
+        </div>
+        <div class="stat-card anim-fade-in-up stagger-2">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="stat-works">0</div>
+          <div class="stat-label">Works Completed</div>
+        </div>
+        <div class="stat-card anim-fade-in-up stagger-3">
+          <div class="stat-icon">💬</div>
+          <div class="stat-value" id="stat-reviews">0</div>
+          <div class="stat-label">Total Reviews</div>
+        </div>
+      </div>
+
+      <!-- My Profile Card -->
+      <div class="card anim-fade-in-up stagger-4" style="margin-bottom:var(--sp-xl);">
+        <h3 style="margin-bottom:var(--sp-lg);">My Profile</h3>
+        <div class="my-profile-card" id="my-profile-card">
+          <!-- Rendered by JS -->
+        </div>
+        <div style="margin-top:var(--sp-lg);">
+          <button class="btn btn-secondary btn-sm" id="btn-update-picture">📷 Update Profile Picture</button>
+          <input type="file" id="profile-pic-input" accept="image/*" style="display:none;">
+        </div>
+      </div>
+
+      <!-- My Reviews -->
+      <div class="card anim-fade-in-up stagger-5">
+        <h3 style="margin-bottom:var(--sp-lg);">My Reviews</h3>
+        <div id="reviews-container">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ═══════ EDIT PROFILE MODAL ═══════ -->
+  <div class="modal-overlay" id="edit-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Edit Profile</h3>
+        <button class="modal-close" id="edit-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-profile-form" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="edit-name">Full Name</label>
+              <input class="form-input" type="text" id="edit-name">
+              <div class="form-error">Error</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-phone">Phone</label>
+              <input class="form-input" type="tel" id="edit-phone">
+              <div class="form-error">Error</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="edit-city">City</label>
+              <input class="form-input" type="text" id="edit-city">
+              <div class="form-error">Error</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-category">Job Category</label>
+              <select class="form-select" id="edit-category">
+                <option>Construction Worker</option>
+                <option>Housekeeper</option>
+                <option>Plumber</option>
+                <option>Electrician</option>
+                <option>Gardener</option>
+                <option>Painter</option>
+                <option>Carpenter</option>
+                <option>Security Guard</option>
+                <option>Driver</option>
+                <option>Other</option>
+              </select>
+              <div class="form-error">Error</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="edit-experience">Years of Experience</label>
+              <input class="form-input" type="number" id="edit-experience" min="0" max="50">
+              <div class="form-error">Error</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-availability">Availability</label>
+              <select class="form-select" id="edit-availability">
+                <option value="true">Available</option>
+                <option value="false">Busy</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-bio">Bio</label>
+            <textarea class="form-textarea" id="edit-bio" rows="3" maxlength="300"></textarea>
+            <div class="char-counter" id="edit-bio-counter">0/300</div>
+            <div class="form-error">Error</div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">
+            <span class="spinner"></span>
+            <span class="btn-text">Save Changes</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { loadScript } from './firebase-init.js';
+    await loadScript('data.js');
+    await loadScript('worker.js');
+  </script>
+  <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">🌙</button>
+  <script>(function(){var btn=document.getElementById('theme-toggle-btn');if(!btn)return;btn.textContent=localStorage.getItem('wfc_theme')==='light'?'☀️':'🌙';btn.addEventListener('click',function(){var l=document.documentElement.getAttribute('data-theme')!=='light';l?document.documentElement.setAttribute('data-theme','light'):document.documentElement.removeAttribute('data-theme');btn.textContent=l?'☀️':'🌙';localStorage.setItem('wfc_theme',l?'light':'dark');});})();</script>
+</body>
+</html>

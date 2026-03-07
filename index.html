@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkForce Connect — Find Skilled Workers</title>
+  <link rel="stylesheet" href="style.css">
+  <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+</head>
+<body>
+
+  <!-- ═══════ HERO SECTION ═══════ -->
+  <section class="hero" id="hero-section">
+    <div class="hero-content anim-fade-in-up">
+      <div style="margin-bottom:var(--sp-lg);">
+        <span style="display:inline-flex;align-items:center;gap:8px;font-family:var(--font-display);font-size:1.3rem;font-weight:700;color:var(--accent);">
+          <span style="width:42px;height:42px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#0D0D0D;font-size:1.2rem;">⚡</span>
+          WorkForce Connect
+        </span>
+      </div>
+      <h1>Find Skilled Workers<br><span class="text-accent">You Can Trust</span></h1>
+      <p class="tagline">Connect with experienced construction workers, plumbers, electricians, housekeepers, and more. Hire local pros with verified reviews — or showcase your skills and find work.</p>
+      <div class="hero-buttons">
+        <button class="btn btn-primary btn-lg" id="btn-looking-for-work">🔨 I'm Looking for Work</button>
+        <button class="btn btn-secondary btn-lg" id="btn-need-to-hire">🔍 I Need to Hire</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ AUTH SECTION (Full-screen split panel) ═══════ -->
+  <section class="auth-overlay" id="auth-section">
+    <div class="auth-split">
+
+      <!-- ── LEFT: Brand Panel ── -->
+      <div class="auth-brand-panel">
+        <div class="auth-brand-inner anim-fade-in-up">
+          <div class="auth-brand-logo">
+            <span class="auth-brand-icon-wrap">⚡</span>
+            <span>WorkForce Connect</span>
+          </div>
+          <h2 class="auth-brand-heading" id="auth-title">Welcome Back</h2>
+          <p class="auth-brand-sub">Connect with trusted professionals or find great work near you.</p>
+          <div class="auth-features">
+            <div class="auth-feature">
+              <span class="auth-feature-check">✓</span>
+              Verified worker profiles
+            </div>
+            <div class="auth-feature">
+              <span class="auth-feature-check">✓</span>
+              Honest client reviews
+            </div>
+            <div class="auth-feature">
+              <span class="auth-feature-check">✓</span>
+              Find local talent fast
+            </div>
+          </div>
+          <button class="auth-back-btn" id="auth-back-btn">← Back to Home</button>
+        </div>
+        <div class="auth-blob auth-blob-1"></div>
+        <div class="auth-blob auth-blob-2"></div>
+        <div class="auth-mesh"></div>
+      </div>
+
+      <!-- ── RIGHT: Form Panel ── -->
+      <div class="auth-form-side">
+        <div class="auth-form-inner">
+
+          <!-- Tabs -->
+          <div class="auth-tabs">
+            <button class="auth-tab active" data-tab="login">Login</button>
+            <button class="auth-tab" data-tab="register">Register</button>
+          </div>
+
+          <!-- ── Login Panel ── -->
+          <div class="auth-form-panel active" id="login-panel">
+            <form id="login-form" novalidate>
+              <div class="form-group">
+                <label class="form-label" for="login-email">Email</label>
+                <input class="form-input" type="email" id="login-email" placeholder="yourname@example.com" autocomplete="email">
+                <div class="form-error">Error</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="login-password">Password</label>
+                <div class="password-wrapper">
+                  <input class="form-input" type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password">
+                  <button type="button" class="pwd-toggle" data-target="login-password" aria-label="Show/hide password">
+                    <svg class="eye-on" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="eye-off" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  </button>
+                </div>
+                <div class="form-error">Error</div>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block" style="margin-top:8px;">
+                <span class="spinner"></span>
+                <span class="btn-text">Login</span>
+              </button>
+            </form>
+          </div>
+
+          <!-- ── Register Panel ── -->
+          <div class="auth-form-panel" id="register-panel">
+
+            <!-- Worker Registration Form -->
+            <form id="register-form-worker" novalidate style="display:none;">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="reg-worker-name">Full Name</label>
+                  <input class="form-input" type="text" id="reg-worker-name" placeholder="John Doe">
+                  <div class="form-error">Error</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="reg-worker-email">Email</label>
+                  <input class="form-input" type="email" id="reg-worker-email" placeholder="john@example.com" autocomplete="email">
+                  <div class="form-error">Error</div>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="reg-worker-password">Password</label>
+                  <div class="password-wrapper">
+                    <input class="form-input" type="password" id="reg-worker-password" placeholder="Min 6 characters" autocomplete="new-password">
+                    <button type="button" class="pwd-toggle" data-target="reg-worker-password" aria-label="Show/hide password">
+                      <svg class="eye-on" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      <svg class="eye-off" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    </button>
+                  </div>
+                  <div class="form-error">Error</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="reg-worker-phone">Phone Number</label>
+                  <input class="form-input" type="tel" id="reg-worker-phone" placeholder="555-0100">
+                  <div class="form-error">Error</div>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="reg-worker-category">Job Category</label>
+                  <select class="form-select" id="reg-worker-category">
+                    <option value="">Select category...</option>
+                    <option>Construction Worker</option>
+                    <option>Housekeeper</option>
+                    <option>Plumber</option>
+                    <option>Electrician</option>
+                    <option>Gardener</option>
+                    <option>Painter</option>
+                    <option>Carpenter</option>
+                    <option>Security Guard</option>
+                    <option>Driver</option>
+                    <option>Other</option>
+                  </select>
+                  <div class="form-error">Error</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="reg-worker-experience">Years of Experience</label>
+                  <input class="form-input" type="number" id="reg-worker-experience" min="0" max="50" placeholder="e.g. 5">
+                  <div class="form-error">Error</div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="reg-worker-city">Location / City</label>
+                <input class="form-input" type="text" id="reg-worker-city" placeholder="Los Angeles">
+                <div class="form-error">Error</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="reg-worker-bio">Short Bio</label>
+                <textarea class="form-textarea" id="reg-worker-bio" rows="3" placeholder="Tell clients about your skills and experience..." maxlength="300"></textarea>
+                <div class="char-counter" id="bio-char-counter">0/300</div>
+                <div class="form-error">Error</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Profile Picture</label>
+                <div class="file-upload-wrapper">
+                  <label class="file-upload-btn" for="reg-worker-picture">📷 Choose a photo</label>
+                  <input type="file" id="reg-worker-picture" accept="image/*">
+                </div>
+                <img id="reg-worker-pic-preview" src="" alt="Preview" style="display:none;width:64px;height:64px;border-radius:50%;object-fit:cover;margin-top:8px;border:2px solid var(--border);">
+              </div>
+              <button type="submit" class="btn btn-primary btn-block">
+                <span class="spinner"></span>
+                <span class="btn-text">Create Worker Account</span>
+              </button>
+            </form>
+
+            <!-- Client Registration Form -->
+            <form id="register-form-client" novalidate style="display:none;">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="reg-client-name">Full Name</label>
+                  <input class="form-input" type="text" id="reg-client-name" placeholder="Jane Smith">
+                  <div class="form-error">Error</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="reg-client-email">Email</label>
+                  <input class="form-input" type="email" id="reg-client-email" placeholder="jane@example.com" autocomplete="email">
+                  <div class="form-error">Error</div>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="reg-client-password">Password</label>
+                  <div class="password-wrapper">
+                    <input class="form-input" type="password" id="reg-client-password" placeholder="Min 6 characters" autocomplete="new-password">
+                    <button type="button" class="pwd-toggle" data-target="reg-client-password" aria-label="Show/hide password">
+                      <svg class="eye-on" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                      <svg class="eye-off" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    </button>
+                  </div>
+                  <div class="form-error">Error</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="reg-client-phone">Phone Number</label>
+                  <input class="form-input" type="tel" id="reg-client-phone" placeholder="555-0200">
+                  <div class="form-error">Error</div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="reg-client-city">Location / City</label>
+                <input class="form-input" type="text" id="reg-client-city" placeholder="New York">
+                <div class="form-error">Error</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Profile Picture</label>
+                <div class="file-upload-wrapper">
+                  <label class="file-upload-btn" for="reg-client-picture">📷 Choose a photo</label>
+                  <input type="file" id="reg-client-picture" accept="image/*">
+                </div>
+                <img id="reg-client-pic-preview" src="" alt="Preview" style="display:none;width:64px;height:64px;border-radius:50%;object-fit:cover;margin-top:8px;border:2px solid var(--border);">
+              </div>
+              <button type="submit" class="btn btn-primary btn-block">
+                <span class="spinner"></span>
+                <span class="btn-text">Create Client Account</span>
+              </button>
+            </form>
+
+          </div><!-- /register-panel -->
+
+        </div><!-- /auth-form-inner -->
+      </div><!-- /auth-form-side -->
+
+    </div><!-- /auth-split -->
+  </section>
+
+  <!-- ═══════ FOOTER ═══════ -->
+  <footer class="footer">
+    <div class="footer-brand">WorkForce Connect</div>
+    <div class="footer-tagline">Connecting skilled workers with clients who need them.</div>
+    <a href="admin-login.html" class="footer-admin-link">Admin Access</a>
+  </footer>
+
+  <!-- Dark / Light mode toggle -->
+  <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">🌙</button>
+
+  <script type="module">
+    import { loadScript } from './firebase-init.js';
+    await loadScript('data.js');
+    await loadScript('auth.js');
+    // Password show/hide toggles
+    document.querySelectorAll('.pwd-toggle').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const input = document.getElementById(this.dataset.target);
+        const showing = input.type === 'password';
+        input.type = showing ? 'text' : 'password';
+        this.querySelector('.eye-on').style.display = showing ? 'none' : '';
+        this.querySelector('.eye-off').style.display = showing ? '' : 'none';
+      });
+    });
+  </script>
+  <script>
+    (function() {
+      var btn = document.getElementById('theme-toggle-btn');
+      if (!btn) return;
+      var isLight = localStorage.getItem('wfc_theme') === 'light';
+      btn.textContent = isLight ? '☀️' : '🌙';
+      btn.addEventListener('click', function() {
+        var light = document.documentElement.getAttribute('data-theme') !== 'light';
+        if (light) {
+          document.documentElement.setAttribute('data-theme', 'light');
+          btn.textContent = '☀️';
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+          btn.textContent = '🌙';
+        }
+        localStorage.setItem('wfc_theme', light ? 'light' : 'dark');
+      });
+    })();
+  </script>
+</body>
+</html>

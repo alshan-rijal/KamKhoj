@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkForce Connect — Worker Profile</title>
+  <link rel="stylesheet" href="style.css">
+  <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+</head>
+<body>
+
+  <!-- ═══════ NAVBAR ═══════ -->
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="client-dashboard.html" class="navbar-brand">
+        <span class="brand-icon">⚡</span>
+        WorkForce Connect
+      </a>
+      <div class="navbar-right">
+        <div class="profile-dropdown-wrapper">
+          <img class="navbar-avatar" id="nav-avatar" src="" alt="Profile" tabindex="0">
+          <div class="profile-dropdown" id="profile-dropdown">
+            <div class="profile-dropdown-header">
+              <div class="dd-name" id="dd-name"></div>
+              <div class="dd-email" id="dd-email"></div>
+            </div>
+            <button class="profile-dropdown-item danger" id="btn-logout-trigger">🚪 Logout</button>
+            <div class="logout-confirm" id="logout-confirm">
+              <p>Are you sure you want to logout?</p>
+              <div class="logout-confirm-btns">
+                <button class="btn btn-danger btn-sm" id="btn-logout-yes">Yes, Logout</button>
+                <button class="btn btn-ghost btn-sm" id="btn-logout-cancel">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════ PAGE CONTENT ═══════ -->
+  <main class="page-content">
+    <div class="container">
+
+      <!-- Back Button -->
+      <button class="back-btn" id="back-btn">← Back to Dashboard</button>
+
+      <!-- Profile Hero -->
+      <div class="profile-hero" id="profile-hero">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-bar" id="stats-bar" style="max-width:700px;margin:0 auto var(--sp-xl);">
+        <div class="stat-card anim-fade-in-up stagger-1">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-value" id="stat-rating">0</div>
+          <div class="stat-label">Average Rating</div>
+        </div>
+        <div class="stat-card anim-fade-in-up stagger-2">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="stat-works">0</div>
+          <div class="stat-label">Works Completed</div>
+        </div>
+        <div class="stat-card anim-fade-in-up stagger-3">
+          <div class="stat-icon">💬</div>
+          <div class="stat-value" id="stat-reviews">0</div>
+          <div class="stat-label">Total Reviews</div>
+        </div>
+      </div>
+
+      <!-- Review Section -->
+      <div class="review-section">
+
+        <!-- Leave a Review Form -->
+        <div id="review-form-wrapper">
+          <!-- Rendered by JS -->
+        </div>
+
+        <!-- All Reviews -->
+        <h3 style="margin-bottom:var(--sp-lg);">All Reviews</h3>
+        <div id="reviews-container">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script type="module">
+    import { loadScript } from './firebase-init.js';
+    await loadScript('data.js');
+    await loadScript('profile.js');
+  </script>
+  <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">🌙</button>
+  <script>(function(){var btn=document.getElementById('theme-toggle-btn');if(!btn)return;btn.textContent=localStorage.getItem('wfc_theme')==='light'?'☀️':'🌙';btn.addEventListener('click',function(){var l=document.documentElement.getAttribute('data-theme')!=='light';l?document.documentElement.setAttribute('data-theme','light'):document.documentElement.removeAttribute('data-theme');btn.textContent=l?'☀️':'🌙';localStorage.setItem('wfc_theme',l?'light':'dark');});})();</script>
+</body>
+</html>

@@ -1,0 +1,263 @@
+/* ========================================
+   WorkForce Connect — Data Layer (data.js)
+   Reads from in-memory cache (loaded by firebase-init.js).
+   Writes sync back to Firestore in the background.
+   Sessions remain in localStorage (client-side only).
+   ======================================== */
+
+const DATA_KEYS = {
+  session: 'wfc_session'
+};
+
+/* ── Category Color Map ── */
+const CATEGORY_MAP = {
+  'Construction Worker': { badge: 'badge-construction', color: '#F4A820' },
+  'Housekeeper':         { badge: 'badge-housekeeper',  color: '#A855F7' },
+  'Plumber':             { badge: 'badge-plumber',       color: '#1E90FF' },
+  'Electrician':         { badge: 'badge-electrician',   color: '#FACC15' },
+  'Gardener':            { badge: 'badge-gardener',      color: '#22C55E' },
+  'Painter':             { badge: 'badge-painter',       color: '#EC4899' },
+  'Carpenter':           { badge: 'badge-carpenter',     color: '#D97706' },
+  'Security Guard':      { badge: 'badge-security',      color: '#9CA3AF' },
+  'Driver':              { badge: 'badge-driver',        color: '#818CF8' },
+  'Other':               { badge: 'badge-other',         color: '#9CA3AF' }
+};
+
+const CATEGORIES = Object.keys(CATEGORY_MAP);
+
+/* ── UUID Generator ── */
+function generateId() {
+  return 'xxxx-xxxx-xxxx'.replace(/x/g, () =>
+    Math.floor(Math.random() * 16).toString(16)
+  );
+}
+
+/* ── Core Read/Write (Firestore + localStorage write-through) ── */
+function getUsers() {
+  return window._wfcUsersCache || [];
+}
+
+function saveUsers(users) {
+  window._wfcUsersCache = [...users];
+  // Instant localStorage write (fast reads on reload)
+  localStorage.setItem('wfc_users', JSON.stringify(users));
+  // Firestore sync — store the promise so callers can await it before redirecting
+  window._pendingFirestoreSync = _syncUsersToFirestore(users);
+}
+
+async function _syncUsersToFirestore(users) {
+  const { doc, setDoc } = window._fs;
+  const db = window._db;
+  try {
+    // JSON round-trip strips undefined values (Firestore rejects them)
+    await Promise.all(users.map(u => setDoc(doc(db, 'users', u.id), JSON.parse(JSON.stringify(u)))));
+    console.log('Firestore sync OK:', users.length, 'users');
+  } catch (e) {
+    console.error('Firestore sync error:', e);
+  }
+}
+
+function getSession() {
+  const raw = localStorage.getItem(DATA_KEYS.session);
+  return raw ? JSON.parse(raw) : null;
+}
+
+function saveSession(session) {
+  localStorage.setItem(DATA_KEYS.session, JSON.stringify(session));
+}
+
+function clearSession() {
+  localStorage.removeItem(DATA_KEYS.session);
+}
+
+/* ── User Queries ── */
+function getUserById(id) {
+  return getUsers().find(u => u.id === id) || null;
+}
+
+function getUserByEmail(email) {
+  return getUsers().find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+}
+
+function getWorkers() {
+  return getUsers().filter(u => u.type === 'worker');
+}
+
+function getCurrentUser() {
+  const session = getSession();
+  if (!session) return null;
+  return getUserById(session.userId);
+}
+
+/* ── User Mutations ── */
+function createUser(userData) {
+  const users = getUsers();
+  if (users.some(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
+    return { success: false, error: 'An account with this email already exists.' };
+  }
+  const user = {
+    id: generateId(),
+    type: userData.type,
+    name: userData.name,
+    email: userData.email,
+    password: userData.password,
+    phone: userData.phone,
+    city: userData.city,
+    profilePicture: userData.profilePicture || null,
+    createdAt: new Date().toISOString(),
+    ...(userData.type === 'worker' ? {
+      category: userData.category,
+      experience: Number(userData.experience) || 0,
+      bio: userData.bio || '',
+      availability: true,
+      worksCompleted: 0,
+      ratings: []
+    } : {})
+  };
+  users.push(user);
+  saveUsers(users);
+  return { success: true, user };
+}
+
+function updateUser(id, updates) {
+  const users = getUsers();
+  const idx = users.findIndex(u => u.id === id);
+  if (idx === -1) return false;
+  users[idx] = { ...users[idx], ...updates };
+  saveUsers(users);
+  return true;
+}
+
+function addRating(workerId, ratingObj) {
+  const users = getUsers();
+  const idx = users.findIndex(u => u.id === workerId);
+  if (idx === -1) return false;
+  users[idx].ratings.push(ratingObj);
+  saveUsers(users);
+  return true;
+}
+
+/* ── Rating Helpers ── */
+function getAverageRating(worker) {
+  if (!worker.ratings || worker.ratings.length === 0) return 0;
+  const sum = worker.ratings.reduce((a, r) => a + r.stars, 0);
+  return Math.round((sum / worker.ratings.length) * 10) / 10;
+}
+
+function hasClientReviewed(workerId, clientId) {
+  const worker = getUserById(workerId);
+  if (!worker || !worker.ratings) return false;
+  return worker.ratings.some(r => r.clientId === clientId);
+}
+
+/* ── Avatar Generation ── */
+function getInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function nameToColor(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const colors = ['#F4A820', '#1E90FF', '#22C55E', '#A855F7', '#EC4899', '#D97706', '#818CF8', '#EF4444'];
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function generateAvatarSVG(name, size = 80) {
+  const initials = getInitials(name);
+  const color = nameToColor(name);
+  return `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <rect width="${size}" height="${size}" rx="${size / 2}" fill="${color}"/>
+      <text x="50%" y="50%" dy=".1em" fill="#0D0D0D" font-family="sans-serif" font-size="${size * 0.38}" font-weight="700" text-anchor="middle" dominant-baseline="central">${initials}</text>
+    </svg>`
+  )}`;
+}
+
+function getAvatarSrc(user) {
+  return user.profilePicture || generateAvatarSVG(user.name);
+}
+
+/* ── Star Rendering ── */
+function renderStars(rating, maxStars = 5) {
+  let html = '<span class="star-rating">';
+  for (let i = 1; i <= maxStars; i++) {
+    html += `<span class="star ${i <= Math.round(rating) ? 'filled' : ''}">★</span>`;
+  }
+  html += '</span>';
+  return html;
+}
+
+/* ── Date Formatting ── */
+function formatDate(isoString) {
+  const d = new Date(isoString);
+  const months = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+/* ── Toast System ── */
+function initToastContainer() {
+  if (!document.querySelector('.toast-container')) {
+    const c = document.createElement('div');
+    c.className = 'toast-container';
+    document.body.appendChild(c);
+  }
+}
+
+function showToast(message, type = 'info') {
+  initToastContainer();
+  const container = document.querySelector('.toast-container');
+  const icons = { success: '✓', error: '✕', info: 'ℹ' };
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span><span>${message}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('removing');
+    toast.addEventListener('animationend', () => toast.remove());
+  }, 3000);
+}
+
+/* ── Category Badge Helper ── */
+function getCategoryBadgeClass(category) {
+  const entry = CATEGORY_MAP[category];
+  return entry ? `badge badge-category ${entry.badge}` : 'badge badge-category badge-other';
+}
+
+/* ── Count-Up Animation ── */
+function animateCountUp(element, target, duration = 1000, decimals = 0) {
+  const start = 0;
+  const startTime = performance.now();
+  function tick(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+    const current = start + (target - start) * eased;
+    element.textContent = decimals > 0 ? current.toFixed(decimals) : Math.round(current);
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ── Auth Guards ── */
+function requireAuth(expectedType) {
+  const session = getSession();
+  if (!session || (expectedType && session.userType !== expectedType)) {
+    window.location.href = 'index.html';
+    return null;
+  }
+  return session;
+}
+
+/* ── Seed Data (disabled — no demo data) ── */
+function seedDataIfEmpty() {
+  // No-op: demo data removed
+}
+
+// Run seed on load
+seedDataIfEmpty();

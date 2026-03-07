@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clients — Admin | WorkForce Connect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin.css">
+  <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+</head>
+<body>
+  <div class="admin-layout" id="admin-layout"></div>
+
+  <!-- Add / Edit Client Modal -->
+  <div class="adm-modal-overlay" id="modal-client">
+    <div class="adm-modal" style="max-width:500px;">
+      <div class="adm-modal-header">
+        <h3 id="modal-client-title">Add Client</h3>
+        <button class="adm-modal-close" onclick="closeModal('modal-client')">&times;</button>
+      </div>
+      <div class="adm-modal-body">
+        <form id="client-form" autocomplete="off">
+          <input type="hidden" id="cf-id">
+          <div class="adm-form-row">
+            <div class="adm-field">
+              <label>Full Name *</label>
+              <input type="text" id="cf-name" required maxlength="60">
+            </div>
+            <div class="adm-field">
+              <label>Email *</label>
+              <input type="email" id="cf-email" required>
+            </div>
+          </div>
+          <div class="adm-form-row">
+            <div class="adm-field">
+              <label>Phone</label>
+              <input type="tel" id="cf-phone" maxlength="20">
+            </div>
+            <div class="adm-field">
+              <label>Company</label>
+              <input type="text" id="cf-company" maxlength="80">
+            </div>
+          </div>
+          <div class="adm-field">
+            <label>Profile Picture</label>
+            <input type="file" id="cf-pic" accept="image/*">
+          </div>
+          <div class="adm-modal-footer">
+            <button type="button" class="adm-btn adm-btn-ghost" onclick="closeModal('modal-client')">Cancel</button>
+            <button type="submit" class="adm-btn adm-btn-primary" id="cf-submit-btn">Save Client</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Client Modal -->
+  <div class="adm-modal-overlay" id="modal-view-client">
+    <div class="adm-modal" style="max-width:480px;">
+      <div class="adm-modal-header">
+        <h3>Client Details</h3>
+        <button class="adm-modal-close" onclick="closeModal('modal-view-client')">&times;</button>
+      </div>
+      <div class="adm-modal-body" id="view-client-body"></div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="adm-modal-overlay" id="modal-delete-client">
+    <div class="adm-modal" style="max-width:420px;">
+      <div class="adm-modal-header">
+        <h3>⚠️ Delete Client</h3>
+        <button class="adm-modal-close" onclick="closeModal('modal-delete-client')">&times;</button>
+      </div>
+      <div class="adm-modal-body" style="text-align:center;padding:2rem;">
+        <p id="delete-client-msg" style="color:rgba(255,255,255,0.6);margin-bottom:1.5rem;"></p>
+        <div style="display:flex;gap:1rem;justify-content:center;margin-top:0.5rem;">
+          <button class="adm-btn adm-btn-ghost" onclick="closeModal('modal-delete-client')">Cancel</button>
+          <button class="adm-btn adm-btn-danger" id="confirm-delete-client-btn" style="min-width:140px;">🗑️ Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { loadScript } from './firebase-init.js';
+    await loadScript('data.js');
+    await loadScript('admin-data.js');
+    await loadScript('admin.js');
+
+    (function() {
+      requireAdminAuth();
+      seedDataIfEmpty();
+
+      const PER_PAGE = 10;
+      let currentPage = 1;
+      let deleteTargetId = null;
+      let editPicBase64 = null;
+
+      const layout = document.getElementById('admin-layout');
+      layout.innerHTML = adminSidebarHTML('clients') + `
+        <main class="admin-main">
+          ${adminTopbarHTML('Clients Management')}
+          <div class="admin-content">
+            <div class="table-toolbar">
+              <div class="toolbar-left">
+                <input type="text" class="adm-search" id="search-input" placeholder="Search clients...">
+              </div>
+              <button class="adm-btn adm-btn-primary" id="btn-add-client">➕ Add Client</button>
+            </div>
+            <div class="adm-table-wrap">
+              <table class="adm-table" id="clients-table">
+                <thead>
+                  <tr>
+                    <th>Client</th>
+                    <th>Company</th>
+                    <th>Phone</th>
+                    <th>Reviews Given</th>
+                    <th>Joined</th>
+                    <th style="text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="clients-tbody"></tbody>
+              </table>
+            </div>
+            <div class="adm-pagination" id="pagination"></div>
+          </div>
+        </main>
+      `;
+
+      initAdminCommon();
+
+      // Count reviews given by a client
+      function reviewsGivenByClient(clientId) {
+        const allReviews = adminGetAllReviews();
+        return allReviews.filter(r => r.clientId === clientId).length;
+      }
+
+      // ── Render Table ──
+      function renderClients() {
+        const search = document.getElementById('search-input').value.toLowerCase();
+        let clients = adminGetClients();
+
+        if (search) {
+          clients = clients.filter(c =>
+            c.name.toLowerCase().includes(search) ||
+            c.email.toLowerCase().includes(search) ||
+            (c.company || '').toLowerCase().includes(search)
+          );
+        }
+
+        const totalPages = Math.max(1, Math.ceil(clients.length / PER_PAGE));
+        if (currentPage > totalPages) currentPage = totalPages;
+        const start = (currentPage - 1) * PER_PAGE;
+        const pageClients = clients.slice(start, start + PER_PAGE);
+
+        const tbody = document.getElementById('clients-tbody');
+        if (pageClients.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:3rem;color:rgba(255,255,255,0.3);">No clients found.</td></tr>`;
+        } else {
+          tbody.innerHTML = pageClients.map((c, i) => {
+            const avatarSrc = adminGetAvatarSrc(c);
+            const revCount = reviewsGivenByClient(c.id);
+            const joinDate = c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '—';
+            return `
+              <tr class="adm-row-in" style="animation-delay:${i * 50}ms;">
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <img src="${avatarSrc}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
+                    <div>
+                      <div style="font-weight:600;">${escHtml(c.name)}</div>
+                      <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);">${escHtml(c.email)}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>${escHtml(c.company || '—')}</td>
+                <td>${escHtml(c.phone || '—')}</td>
+                <td style="font-family:'JetBrains Mono',monospace;">${revCount}</td>
+                <td style="font-size:0.8rem;color:rgba(255,255,255,0.4);">${joinDate}</td>
+                <td style="text-align:right;">
+                  <div class="action-btns">
+                    <button class="adm-btn-icon" title="View" onclick="viewClient('${c.id}')">👁</button>
+                    <button class="adm-btn-icon" title="Edit" onclick="editClient('${c.id}')">✏️</button>
+                    <button class="adm-btn-icon danger" title="Delete" onclick="confirmDeleteClient('${c.id}')">🗑️</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+        renderPagination(totalPages);
+      }
+
+      function renderPagination(totalPages) {
+        const pag = document.getElementById('pagination');
+        if (totalPages <= 1) { pag.innerHTML = ''; return; }
+        let html = `<button class="adm-page-btn" ${currentPage <= 1 ? 'disabled' : ''} onclick="goPage(${currentPage - 1})">‹</button>`;
+        for (let i = 1; i <= totalPages; i++) {
+          html += `<button class="adm-page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+        }
+        html += `<button class="adm-page-btn" ${currentPage >= totalPages ? 'disabled' : ''} onclick="goPage(${currentPage + 1})">›</button>`;
+        pag.innerHTML = html;
+      }
+      window.goPage = function(p) { currentPage = p; renderClients(); };
+
+      document.getElementById('search-input').addEventListener('input', () => { currentPage = 1; renderClients(); });
+
+      // ── View Client ──
+      window.viewClient = function(id) {
+        const c = adminGetUserById(id);
+        if (!c) return;
+        const avatarSrc = adminGetAvatarSrc(c);
+        const revCount = reviewsGivenByClient(c.id);
+        document.getElementById('view-client-body').innerHTML = `
+          <div style="text-align:center;margin-bottom:1.5rem;">
+            <img src="${avatarSrc}" alt="" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:0.75rem;">
+            <h3 style="color:#fff;margin:0;">${escHtml(c.name)}</h3>
+          </div>
+          <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Email</span><span class="detail-value">${escHtml(c.email)}</span></div>
+            <div class="detail-item"><span class="detail-label">Phone</span><span class="detail-value">${escHtml(c.phone || '—')}</span></div>
+            <div class="detail-item"><span class="detail-label">Company</span><span class="detail-value">${escHtml(c.company || '—')}</span></div>
+            <div class="detail-item"><span class="detail-label">Reviews Given</span><span class="detail-value" style="font-family:'JetBrains Mono',monospace;">${revCount}</span></div>
+            <div class="detail-item"><span class="detail-label">Joined</span><span class="detail-value">${c.createdAt ? new Date(c.createdAt).toLocaleDateString() : '—'}</span></div>
+          </div>
+        `;
+        openModal('modal-view-client');
+      };
+
+      // ── Add Client ──
+      document.getElementById('btn-add-client').addEventListener('click', () => {
+        document.getElementById('modal-client-title').textContent = 'Add Client';
+        document.getElementById('cf-submit-btn').textContent = 'Save Client';
+        document.getElementById('client-form').reset();
+        document.getElementById('cf-id').value = '';
+        editPicBase64 = null;
+        openModal('modal-client');
+      });
+
+      // ── Edit Client ──
+      window.editClient = function(id) {
+        const c = adminGetUserById(id);
+        if (!c) return;
+        document.getElementById('modal-client-title').textContent = 'Edit Client';
+        document.getElementById('cf-submit-btn').textContent = 'Update Client';
+        document.getElementById('cf-id').value = c.id;
+        document.getElementById('cf-name').value = c.name;
+        document.getElementById('cf-email').value = c.email;
+        document.getElementById('cf-phone').value = c.phone || '';
+        document.getElementById('cf-company').value = c.company || '';
+        editPicBase64 = c.profilePicture || null;
+        openModal('modal-client');
+      };
+
+      // ── Save/Update Client ──
+      document.getElementById('client-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('cf-id').value;
+        const name = document.getElementById('cf-name').value.trim();
+        const email = document.getElementById('cf-email').value.trim();
+        const phone = document.getElementById('cf-phone').value.trim();
+        const company = document.getElementById('cf-company').value.trim();
+
+        if (!name || !email) {
+          adminShowToast('Please fill required fields', 'error');
+          return;
+        }
+
+        const picInput = document.getElementById('cf-pic');
+        const saveFn = (pic) => {
+          if (id) {
+            const updates = { name, email, phone, company };
+            if (pic) updates.profilePicture = pic;
+            adminUpdateUser(id, updates);
+            logAdminActivity('update', `Updated client: ${name}`);
+            adminShowToast('Client updated! Syncing to Firestore...', 'success');
+          } else {
+            const existing = adminGetUsers().find(u => u.email.toLowerCase() === email.toLowerCase());
+            if (existing) {
+              adminShowToast('Email already exists!', 'error');
+              return;
+            }
+            adminCreateUser({
+              type: 'client', name, email, password: 'default123',
+              phone, company, profilePicture: pic || null
+            });
+            logAdminActivity('create', `Created client: ${name}`);
+            adminShowToast('Client created! Syncing to Firestore...', 'success');
+          }
+          closeModal('modal-client');
+          renderClients();
+        };
+
+        if (picInput.files[0]) {
+          fileToBase64(picInput, saveFn);
+        } else {
+          saveFn(editPicBase64);
+        }
+      });
+
+      // ── Delete Client ──
+      window.confirmDeleteClient = function(id) {
+        const c = adminGetUserById(id);
+        if (!c) return;
+        deleteTargetId = id;
+        document.getElementById('delete-client-msg').innerHTML = `Are you sure you want to delete <strong>${escHtml(c.name)}</strong>? Their reviews will also be removed from workers.`;
+        openModal('modal-delete-client');
+      };
+
+      // Delete confirmation button
+      document.getElementById('confirm-delete-client-btn').addEventListener('click', async function() {
+        if (!deleteTargetId) return;
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Deleting...';
+        const c = adminGetUserById(deleteTargetId);
+        try {
+          await adminDeleteUser(deleteTargetId);
+          logAdminActivity('delete', `Deleted client: ${c ? c.name : 'Unknown'}`);
+          adminShowToast('Client deleted from Firestore.', 'info');
+        } catch(e) {
+          adminShowToast('Delete failed: ' + e.message, 'error');
+        }
+        deleteTargetId = null;
+        btn.disabled = false;
+        btn.textContent = '🗑️ Delete';
+        closeModal('modal-delete-client');
+        renderClients();
+      });
+
+      renderClients();
+    })();
+  </script>
+</body>
+</html>

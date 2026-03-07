@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Admin | WorkForce Connect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin.css">
+  <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+</head>
+<body>
+  <div class="admin-layout" id="admin-layout">
+    <!-- Sidebar + Topbar injected by JS -->
+  </div>
+
+  <!-- Clear All Data Confirmation Modal -->
+  <div class="adm-modal-overlay" id="modal-clear">
+    <div class="adm-modal">
+      <div class="adm-modal-header">
+        <h3>⚠️ Clear All User Data</h3>
+        <button class="adm-modal-close" onclick="closeModal('modal-clear')">&times;</button>
+      </div>
+      <div class="adm-modal-body" style="text-align:center;padding:2rem;">
+        <p style="color:rgba(255,255,255,0.6);margin-bottom:1.5rem;">This will permanently delete <strong>all workers, clients, and reviews</strong>. This action cannot be undone.</p>
+        <p style="font-size:0.8rem;color:rgba(255,255,255,0.35);margin-bottom:1.5rem;">Hold the button below for 3 seconds to confirm.</p>
+        <button class="adm-btn adm-btn-danger hold-confirm" id="hold-clear-btn" style="min-width:220px;">
+          <span class="hold-ring"></span>
+          <span class="hold-text">Hold to Clear All Data</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { loadScript } from './firebase-init.js';
+    await loadScript('data.js');
+    await loadScript('admin-data.js');
+    await loadScript('admin.js');
+
+    (function() {
+      requireAdminAuth();
+      seedDataIfEmpty();
+
+      const layout = document.getElementById('admin-layout');
+      layout.innerHTML = adminSidebarHTML('dashboard') + `
+        <main class="admin-main">
+          ${adminTopbarHTML('Dashboard')}
+          <div class="admin-content" id="dashboard-content">
+            <!-- Stat Cards -->
+            <div class="stat-cards">
+              <div class="stat-card" style="--delay:0">
+                <div class="stat-icon">👷</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="stat-workers">0</div>
+                  <div class="stat-label">Total Workers</div>
+                </div>
+              </div>
+              <div class="stat-card" style="--delay:1">
+                <div class="stat-icon">🧑‍💼</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="stat-clients">0</div>
+                  <div class="stat-label">Total Clients</div>
+                </div>
+              </div>
+              <div class="stat-card" style="--delay:2">
+                <div class="stat-icon">⭐</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="stat-reviews">0</div>
+                  <div class="stat-label">Total Reviews</div>
+                </div>
+              </div>
+              <div class="stat-card" style="--delay:3">
+                <div class="stat-icon">📊</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="stat-avg">0</div>
+                  <div class="stat-label">Avg Rating</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="admin-section">
+              <h2 class="section-title">Quick Actions</h2>
+              <div class="quick-actions">
+                <button class="adm-btn adm-btn-primary" onclick="window.location.href='admin-workers.html'">
+                  ➕ Add Worker
+                </button>
+                <button class="adm-btn adm-btn-info" onclick="window.location.href='admin-clients.html'">
+                  ➕ Add Client
+                </button>
+                <button class="adm-btn adm-btn-success" id="btn-export">
+                  📦 Export JSON
+                </button>
+                <button class="adm-btn adm-btn-danger" id="btn-clear-all">
+                  🗑️ Clear All Data
+                </button>
+              </div>
+            </div>
+
+            <!-- Two Column: Charts + Activity -->
+            <div class="dashboard-grid">
+              <!-- Category Distribution -->
+              <div class="admin-section">
+                <h2 class="section-title">Worker Categories</h2>
+                <div class="chart-bars" id="chart-categories"></div>
+              </div>
+
+              <!-- Rating Distribution -->
+              <div class="admin-section">
+                <h2 class="section-title">Rating Distribution</h2>
+                <div class="chart-bars" id="chart-ratings"></div>
+              </div>
+            </div>
+
+            <!-- Activity Feed -->
+            <div class="admin-section">
+              <h2 class="section-title">Recent Activity</h2>
+              <div class="activity-feed" id="activity-feed"></div>
+            </div>
+          </div>
+        </main>
+      `;
+
+      initAdminCommon();
+
+      // ── Stats ──
+      const workers = adminGetWorkers();
+      const clients = adminGetClients();
+      const allReviews = adminGetAllReviews();
+      const avgRating = allReviews.length > 0
+        ? (allReviews.reduce((s, r) => s + r.stars, 0) / allReviews.length)
+        : 0;
+
+      adminAnimateCountUp(document.getElementById('stat-workers'), workers.length);
+      adminAnimateCountUp(document.getElementById('stat-clients'), clients.length);
+      adminAnimateCountUp(document.getElementById('stat-reviews'), allReviews.length);
+      adminAnimateCountUp(document.getElementById('stat-avg'), avgRating, 1500, 1);
+
+      // ── Category Chart ──
+      const catCounts = {};
+      workers.forEach(w => {
+        const cat = w.category || 'Other';
+        catCounts[cat] = (catCounts[cat] || 0) + 1;
+      });
+      const maxCat = Math.max(...Object.values(catCounts), 1);
+      const chartCat = document.getElementById('chart-categories');
+      chartCat.innerHTML = Object.entries(catCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([cat, count]) => `
+          <div class="bar-row">
+            <span class="bar-label">${escHtml(cat)}</span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:${(count / maxCat) * 100}%;">${count}</div>
+            </div>
+          </div>
+        `).join('') || '<p style="color:rgba(255,255,255,0.3);text-align:center;">No workers yet.</p>';
+
+      // ── Rating Chart ──
+      const ratingCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+      allReviews.forEach(r => { if (ratingCounts[r.stars] !== undefined) ratingCounts[r.stars]++; });
+      const maxRat = Math.max(...Object.values(ratingCounts), 1);
+      const chartRat = document.getElementById('chart-ratings');
+      chartRat.innerHTML = [5, 4, 3, 2, 1].map(star => `
+        <div class="bar-row">
+          <span class="bar-label">${'★'.repeat(star)}${'☆'.repeat(5 - star)}</span>
+          <div class="bar-track">
+            <div class="bar-fill bar-fill-gold" style="width:${(ratingCounts[star] / maxRat) * 100}%;">${ratingCounts[star]}</div>
+          </div>
+        </div>
+      `).join('');
+
+      // ── Activity Feed ──
+      const activities = getAdminActivity().slice(0, 10);
+      const feedEl = document.getElementById('activity-feed');
+      if (activities.length === 0) {
+        feedEl.innerHTML = '<p style="color:rgba(255,255,255,0.3);text-align:center;padding:2rem;">No activity yet.</p>';
+      } else {
+        feedEl.innerHTML = activities.map(a => `
+          <div class="activity-item">
+            <div class="activity-icon">${activityIcon(a.action)}</div>
+            <div class="activity-body">
+              <div class="activity-text">${escHtml(a.description)}</div>
+              <div class="activity-time">${adminRelativeTime(a.timestamp)}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      function activityIcon(action) {
+        const map = { create: '➕', update: '✏️', delete: '🗑️', toggle: '🔄', flag: '🚩', export: '📦', clear: '⚠️', login: '🔑' };
+        return map[action] || '📋';
+      }
+
+      // ── Export ──
+      document.getElementById('btn-export').addEventListener('click', () => {
+        adminExportData();
+        logAdminActivity('export', 'Exported platform data as JSON');
+        adminShowToast('Data exported successfully!', 'success');
+      });
+
+      // ── Clear All Data ──
+      document.getElementById('btn-clear-all').addEventListener('click', () => {
+        openModal('modal-clear');
+      });
+
+      // Hold-to-confirm
+      const holdBtn = document.getElementById('hold-clear-btn');
+      let holdTimer = null;
+      let holdStart = 0;
+      const HOLD_DURATION = 3000;
+
+      holdBtn.addEventListener('mousedown', startHold);
+      holdBtn.addEventListener('touchstart', startHold);
+      holdBtn.addEventListener('mouseup', cancelHold);
+      holdBtn.addEventListener('mouseleave', cancelHold);
+      holdBtn.addEventListener('touchend', cancelHold);
+
+      function startHold(e) {
+        e.preventDefault();
+        holdStart = Date.now();
+        holdBtn.classList.add('holding');
+        holdBtn.querySelector('.hold-text').textContent = 'Hold... 3s';
+        holdTimer = setInterval(() => {
+          const elapsed = Date.now() - holdStart;
+          const remaining = Math.max(0, Math.ceil((HOLD_DURATION - elapsed) / 1000));
+          holdBtn.querySelector('.hold-text').textContent = `Hold... ${remaining}s`;
+          if (elapsed >= HOLD_DURATION) {
+            clearInterval(holdTimer);
+            performClear();
+          }
+        }, 100);
+      }
+
+      function cancelHold() {
+        if (holdTimer) clearInterval(holdTimer);
+        holdBtn.classList.remove('holding');
+        holdBtn.querySelector('.hold-text').textContent = 'Hold to Clear All Data';
+      }
+
+      function performClear() {
+        // Clear all users from Firestore + cache
+        const { getDocs, collection, deleteDoc } = window._fs;
+        const db = window._db;
+        getDocs(collection(db, 'users')).then(snapshot => {
+          const deletes = [];
+          snapshot.forEach(d => deletes.push(deleteDoc(d.ref)));
+          return Promise.all(deletes);
+        }).then(() => {
+          window._wfcUsersCache = [];
+          seedDataIfEmpty();
+          logAdminActivity('clear', 'Cleared all user data and re-seeded');
+          closeModal('modal-clear');
+          adminShowToast('All data cleared and re-seeded!', 'info');
+          setTimeout(() => location.reload(), 1000);
+        });
+      }
+
+      // Log this visit
+      logAdminActivity('login', 'Viewed admin dashboard');
+
+    })();
+  </script>
+</body>
+</html>

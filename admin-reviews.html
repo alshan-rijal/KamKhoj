@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reviews — Admin | WorkForce Connect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin.css">
+  <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+</head>
+<body>
+  <div class="admin-layout" id="admin-layout"></div>
+
+  <!-- Delete Review Confirmation Modal -->
+  <div class="adm-modal-overlay" id="modal-delete-review">
+    <div class="adm-modal" style="max-width:420px;">
+      <div class="adm-modal-header">
+        <h3>⚠️ Delete Review</h3>
+        <button class="adm-modal-close" onclick="closeModal('modal-delete-review')">&times;</button>
+      </div>
+      <div class="adm-modal-body" style="text-align:center;padding:2rem;">
+        <p id="delete-review-msg" style="color:rgba(255,255,255,0.6);margin-bottom:1.5rem;"></p>
+        <div class="adm-modal-footer" style="justify-content:center;">
+          <button class="adm-btn adm-btn-ghost" onclick="closeModal('modal-delete-review')">Cancel</button>
+          <button class="adm-btn adm-btn-danger" id="confirm-delete-review-btn">Delete Review</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { loadScript } from './firebase-init.js';
+    await loadScript('data.js');
+    await loadScript('admin-data.js');
+    await loadScript('admin.js');
+
+    (function() {
+      requireAdminAuth();
+      seedDataIfEmpty();
+
+      let activeTab = 'all'; // 'all' or 'flagged'
+      let filterStars = '';
+      let filterWorker = '';
+      let searchQuery = '';
+      let sortBy = 'newest';
+      let deleteTarget = null; // { workerId, reviewIndex }
+
+      const layout = document.getElementById('admin-layout');
+      layout.innerHTML = adminSidebarHTML('reviews') + `
+        <main class="admin-main">
+          ${adminTopbarHTML('Reviews Management')}
+          <div class="admin-content">
+            <!-- Tabs -->
+            <div class="adm-tabs" id="review-tabs">
+              <button class="adm-tab active" data-tab="all">All Reviews</button>
+              <button class="adm-tab" data-tab="flagged">
+                🚩 Flagged Only <span class="tab-badge" id="flagged-count">0</span>
+              </button>
+            </div>
+
+            <!-- Filters -->
+            <div class="table-toolbar" style="flex-wrap:wrap;">
+              <div class="toolbar-left" style="flex-wrap:wrap;gap:8px;">
+                <input type="text" class="adm-search" id="search-input" placeholder="Search reviews...">
+                <select class="adm-select" id="filter-stars">
+                  <option value="">All Stars</option>
+                  <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+                  <option value="4">⭐⭐⭐⭐ (4)</option>
+                  <option value="3">⭐⭐⭐ (3)</option>
+                  <option value="2">⭐⭐ (2)</option>
+                  <option value="1">⭐ (1)</option>
+                </select>
+                <select class="adm-select" id="filter-worker"></select>
+                <select class="adm-select" id="sort-by">
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="highest">Highest Rating</option>
+                  <option value="lowest">Lowest Rating</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="stat-cards" style="margin-bottom:1.5rem;">
+              <div class="stat-card" style="--delay:0">
+                <div class="stat-icon">📝</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="stat-total">0</div>
+                  <div class="stat-label">Total Reviews</div>
+                </div>
+              </div>
+              <div class="stat-card" style="--delay:1">
+                <div class="stat-icon">⭐</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="stat-avg">0</div>
+                  <div class="stat-label">Average Rating</div>
+                </div>
+              </div>
+              <div class="stat-card" style="--delay:2">
+                <div class="stat-icon">🚩</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="stat-flagged">0</div>
+                  <div class="stat-label">Flagged</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Review Cards -->
+            <div class="review-cards-grid" id="reviews-container"></div>
+          </div>
+        </main>
+      `;
+
+      initAdminCommon();
+
+      // Populate worker filter
+      const workerSelect = document.getElementById('filter-worker');
+      workerSelect.innerHTML = '<option value="">All Workers</option>';
+      adminGetWorkers().forEach(w => {
+        const opt = document.createElement('option');
+        opt.value = w.id; opt.textContent = w.name;
+        workerSelect.appendChild(opt);
+      });
+
+      // Tabs
+      document.querySelectorAll('.adm-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.adm-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          activeTab = tab.dataset.tab;
+          renderReviews();
+        });
+      });
+
+      // Filters
+      document.getElementById('search-input').addEventListener('input', (e) => { searchQuery = e.target.value.toLowerCase(); renderReviews(); });
+      document.getElementById('filter-stars').addEventListener('change', (e) => { filterStars = e.target.value; renderReviews(); });
+      document.getElementById('filter-worker').addEventListener('change', (e) => { filterWorker = e.target.value; renderReviews(); });
+      document.getElementById('sort-by').addEventListener('change', (e) => { sortBy = e.target.value; renderReviews(); });
+
+      function renderReviews() {
+        let reviews = adminGetAllReviews();
+        const flaggedCount = reviews.filter(r => r.flagged).length;
+        document.getElementById('flagged-count').textContent = flaggedCount;
+
+        // Tabs
+        if (activeTab === 'flagged') {
+          reviews = reviews.filter(r => r.flagged);
+        }
+
+        // Filters
+        if (filterStars) reviews = reviews.filter(r => r.stars === parseInt(filterStars));
+        if (filterWorker) reviews = reviews.filter(r => r.workerId === filterWorker);
+        if (searchQuery) {
+          reviews = reviews.filter(r =>
+            (r.comment || '').toLowerCase().includes(searchQuery) ||
+            (r.clientName || '').toLowerCase().includes(searchQuery) ||
+            (r.workerName || '').toLowerCase().includes(searchQuery)
+          );
+        }
+
+        // Sort
+        reviews.sort((a, b) => {
+          if (sortBy === 'newest') return new Date(b.date) - new Date(a.date);
+          if (sortBy === 'oldest') return new Date(a.date) - new Date(b.date);
+          if (sortBy === 'highest') return b.stars - a.stars;
+          if (sortBy === 'lowest') return a.stars - b.stars;
+          return 0;
+        });
+
+        // Stats
+        const allReviews = adminGetAllReviews();
+        const totalReviews = allReviews.length;
+        const avg = totalReviews > 0
+          ? (allReviews.reduce((s, r) => s + r.stars, 0) / totalReviews).toFixed(1)
+          : '0';
+
+        adminAnimateCountUp(document.getElementById('stat-total'), totalReviews);
+        adminAnimateCountUp(document.getElementById('stat-avg'), parseFloat(avg), 1000, 1);
+        adminAnimateCountUp(document.getElementById('stat-flagged'), adminGetFlaggedCount());
+
+        // Render
+        const container = document.getElementById('reviews-container');
+        if (reviews.length === 0) {
+          container.innerHTML = `<div style="text-align:center;padding:3rem;color:rgba(255,255,255,0.3);grid-column:1/-1;">
+            ${activeTab === 'flagged' ? 'No flagged reviews.' : 'No reviews match your filters.'}
+          </div>`;
+          return;
+        }
+
+        container.innerHTML = reviews.map((r, i) => `
+          <div class="adm-review-card ${r.flagged ? 'flagged' : ''}" style="animation-delay:${i * 60}ms;">
+            <div class="adm-review-header">
+              <div class="adm-review-stars">${adminRenderStars(r.stars)}</div>
+              <div class="adm-review-date">${r.date ? adminRelativeTime(r.date) : '—'}</div>
+            </div>
+            <div class="adm-review-meta">
+              <div>
+                <span style="color:rgba(255,255,255,0.5);font-size:0.75rem;">By:</span>
+                <strong>${escHtml(r.clientName || 'Unknown')}</strong>
+              </div>
+              <div>
+                <span style="color:rgba(255,255,255,0.5);font-size:0.75rem;">For:</span>
+                <strong style="color:#F4A820;">${escHtml(r.workerName || 'Unknown')}</strong>
+              </div>
+            </div>
+            ${r.comment ? `<div class="adm-review-comment">${escHtml(r.comment)}</div>` : ''}
+            ${r.flagged ? '<div class="adm-review-flag-badge">🚩 Flagged</div>' : ''}
+            <div class="adm-review-actions">
+              <button class="adm-btn-sm ${r.flagged ? 'adm-btn-success' : 'adm-btn-warning'}"
+                onclick="toggleFlag('${r.workerId}', ${r.reviewIndex})">
+                ${r.flagged ? '✓ Unflag' : '🚩 Flag'}
+              </button>
+              <button class="adm-btn-sm adm-btn-danger" onclick="confirmDeleteReview('${r.workerId}', ${r.reviewIndex})">
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Toggle flag
+      window.toggleFlag = function(workerId, reviewIndex) {
+        adminToggleReviewFlag(workerId, reviewIndex);
+        const review = adminGetAllReviews().find(r => r.workerId === workerId && r.reviewIndex === reviewIndex);
+        const flagged = review ? review.flagged : false;
+        logAdminActivity('flag', `${flagged ? 'Flagged' : 'Unflagged'} a review`);
+        adminShowToast(flagged ? 'Review flagged' : 'Review unflagged', 'info');
+        renderReviews();
+        updateBellBadge();
+      };
+
+      // Delete review
+      window.confirmDeleteReview = function(workerId, reviewIndex) {
+        deleteTarget = { workerId, reviewIndex };
+        const reviews = adminGetAllReviews();
+        const review = reviews.find(r => r.workerId === workerId && r.reviewIndex === reviewIndex);
+        document.getElementById('delete-review-msg').innerHTML = review
+          ? `Delete this ${review.stars}-star review by <strong>${escHtml(review.clientName || 'Unknown')}</strong>?`
+          : 'Delete this review?';
+        openModal('modal-delete-review');
+      };
+
+      document.getElementById('confirm-delete-review-btn').addEventListener('click', () => {
+        if (!deleteTarget) return;
+        adminDeleteReview(deleteTarget.workerId, deleteTarget.reviewIndex);
+        logAdminActivity('delete', 'Deleted a review');
+        deleteTarget = null;
+        closeModal('modal-delete-review');
+        adminShowToast('Review deleted', 'info');
+        renderReviews();
+        updateBellBadge();
+      });
+
+      renderReviews();
+    })();
+  </script>
+</body>
+</html>

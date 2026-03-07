@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkForce Connect — Client Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+</head>
+<body>
+
+  <!-- ═══════ NAVBAR ═══════ -->
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="client-dashboard.html" class="navbar-brand">
+        <span class="brand-icon">⚡</span>
+        WorkForce Connect
+      </a>
+      <div class="navbar-right">
+        <!-- Profile Dropdown -->
+        <div class="profile-dropdown-wrapper">
+          <img class="navbar-avatar" id="nav-avatar" src="" alt="Profile" tabindex="0">
+          <div class="profile-dropdown" id="profile-dropdown">
+            <div class="profile-dropdown-header">
+              <div class="dd-name" id="dd-name"></div>
+              <div class="dd-email" id="dd-email"></div>
+            </div>
+            <button class="profile-dropdown-item" id="btn-edit-profile">✏️ Edit Profile</button>
+            <button class="profile-dropdown-item danger" id="btn-logout-trigger">🚪 Logout</button>
+            <div class="logout-confirm" id="logout-confirm">
+              <p>Are you sure you want to logout?</p>
+              <div class="logout-confirm-btns">
+                <button class="btn btn-danger btn-sm" id="btn-logout-yes">Yes, Logout</button>
+                <button class="btn btn-ghost btn-sm" id="btn-logout-cancel">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="hamburger" id="hamburger" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════ PAGE CONTENT ═══════ -->
+  <main class="page-content">
+    <div class="container">
+
+      <h2 style="margin-top:var(--sp-lg);margin-bottom:var(--sp-lg);" class="anim-fade-in-up">Find Workers</h2>
+
+      <!-- Search & Filter Bar -->
+      <div class="search-filter-bar anim-fade-in-up stagger-1">
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input class="form-input" type="text" id="search-input" placeholder="Search by name or keyword...">
+        </div>
+        <select class="form-select filter-select" id="filter-category">
+          <option value="">All Categories</option>
+          <option>Construction Worker</option>
+          <option>Housekeeper</option>
+          <option>Plumber</option>
+          <option>Electrician</option>
+          <option>Gardener</option>
+          <option>Painter</option>
+          <option>Carpenter</option>
+          <option>Security Guard</option>
+          <option>Driver</option>
+          <option>Other</option>
+        </select>
+        <select class="form-select filter-select" id="filter-availability">
+          <option value="">All Availability</option>
+          <option value="available">Available Only</option>
+        </select>
+        <select class="form-select filter-select" id="filter-sort">
+          <option value="">Default</option>
+          <option value="highest-rated">Highest Rated</option>
+          <option value="most-reviews">Most Reviews</option>
+          <option value="most-experience">Most Experience</option>
+        </select>
+      </div>
+
+      <!-- Skeleton Loaders -->
+      <div class="workers-grid" id="skeleton-grid">
+        <div class="skeleton-card">
+          <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;">
+            <div class="skeleton-circle"></div>
+            <div style="flex:1;">
+              <div class="skeleton-line w-60"></div>
+              <div class="skeleton-line w-40"></div>
+            </div>
+          </div>
+          <div class="skeleton-line w-80"></div>
+          <div class="skeleton-line w-60"></div>
+        </div>
+        <div class="skeleton-card">
+          <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;">
+            <div class="skeleton-circle"></div>
+            <div style="flex:1;">
+              <div class="skeleton-line w-60"></div>
+              <div class="skeleton-line w-40"></div>
+            </div>
+          </div>
+          <div class="skeleton-line w-80"></div>
+          <div class="skeleton-line w-60"></div>
+        </div>
+        <div class="skeleton-card">
+          <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;">
+            <div class="skeleton-circle"></div>
+            <div style="flex:1;">
+              <div class="skeleton-line w-60"></div>
+              <div class="skeleton-line w-40"></div>
+            </div>
+          </div>
+          <div class="skeleton-line w-80"></div>
+          <div class="skeleton-line w-60"></div>
+        </div>
+      </div>
+
+      <!-- Workers Grid -->
+      <div class="workers-grid" id="workers-grid" style="display:none;">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" id="empty-state" style="display:none;">
+        <div class="empty-state-icon">🔍</div>
+        <h4 class="empty-state-title" id="empty-state-title">No Workers Found</h4>
+        <p class="empty-state-text" id="empty-state-text">No workers match your search criteria.</p>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ═══════ EDIT PROFILE MODAL ═══════ -->
+  <div class="modal-overlay" id="edit-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Edit Profile</h3>
+        <button class="modal-close" id="edit-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-profile-form" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="edit-name">Full Name</label>
+              <input class="form-input" type="text" id="edit-name">
+              <div class="form-error">Error</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="edit-phone">Phone</label>
+              <input class="form-input" type="tel" id="edit-phone">
+              <div class="form-error">Error</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-city">City</label>
+            <input class="form-input" type="text" id="edit-city">
+            <div class="form-error">Error</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Profile Picture</label>
+            <div class="file-upload-wrapper">
+              <label class="file-upload-btn" for="edit-picture">📷 Change photo</label>
+              <input type="file" id="edit-picture" accept="image/*">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">
+            <span class="spinner"></span>
+            <span class="btn-text">Save Changes</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { loadScript } from './firebase-init.js';
+    await loadScript('data.js');
+    await loadScript('client.js');
+  </script>
+  <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">🌙</button>
+  <script>(function(){var btn=document.getElementById('theme-toggle-btn');if(!btn)return;btn.textContent=localStorage.getItem('wfc_theme')==='light'?'☀️':'🌙';btn.addEventListener('click',function(){var l=document.documentElement.getAttribute('data-theme')!=='light';l?document.documentElement.setAttribute('data-theme','light'):document.documentElement.removeAttribute('data-theme');btn.textContent=l?'☀️':'🌙';localStorage.setItem('wfc_theme',l?'light':'dark');});})();</script>
+</body>
+</html>

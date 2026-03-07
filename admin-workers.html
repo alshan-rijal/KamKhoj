@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workers — Admin | WorkForce Connect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="admin.css">
+  <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+</head>
+<body>
+  <div class="admin-layout" id="admin-layout"></div>
+
+  <!-- Add / Edit Worker Modal -->
+  <div class="adm-modal-overlay" id="modal-worker">
+    <div class="adm-modal" style="max-width:550px;">
+      <div class="adm-modal-header">
+        <h3 id="modal-worker-title">Add Worker</h3>
+        <button class="adm-modal-close" onclick="closeModal('modal-worker')">&times;</button>
+      </div>
+      <div class="adm-modal-body">
+        <form id="worker-form" autocomplete="off">
+          <input type="hidden" id="wf-id">
+          <div class="adm-form-row">
+            <div class="adm-field">
+              <label>Full Name *</label>
+              <input type="text" id="wf-name" required maxlength="60">
+            </div>
+            <div class="adm-field">
+              <label>Email *</label>
+              <input type="email" id="wf-email" required>
+            </div>
+          </div>
+          <div class="adm-form-row">
+            <div class="adm-field">
+              <label>Category *</label>
+              <select id="wf-category" required></select>
+            </div>
+            <div class="adm-field">
+              <label>Experience (years)</label>
+              <input type="number" id="wf-experience" min="0" max="50" value="0">
+            </div>
+          </div>
+          <div class="adm-form-row">
+            <div class="adm-field">
+              <label>Location</label>
+              <input type="text" id="wf-location" maxlength="80">
+            </div>
+            <div class="adm-field">
+              <label>Phone</label>
+              <input type="tel" id="wf-phone" maxlength="20">
+            </div>
+          </div>
+          <div class="adm-field">
+            <label>Bio</label>
+            <textarea id="wf-bio" rows="3" maxlength="300"></textarea>
+          </div>
+          <div class="adm-form-row">
+            <div class="adm-field">
+              <label>Profile Picture</label>
+              <input type="file" id="wf-pic" accept="image/*">
+            </div>
+            <div class="adm-field">
+              <label>Available</label>
+              <label class="adm-toggle">
+                <input type="checkbox" id="wf-available" checked>
+                <span class="adm-toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="adm-modal-footer">
+            <button type="button" class="adm-btn adm-btn-ghost" onclick="closeModal('modal-worker')">Cancel</button>
+            <button type="submit" class="adm-btn adm-btn-primary" id="wf-submit-btn">Save Worker</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Worker Modal -->
+  <div class="adm-modal-overlay" id="modal-view-worker">
+    <div class="adm-modal" style="max-width:500px;">
+      <div class="adm-modal-header">
+        <h3>Worker Details</h3>
+        <button class="adm-modal-close" onclick="closeModal('modal-view-worker')">&times;</button>
+      </div>
+      <div class="adm-modal-body" id="view-worker-body"></div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="adm-modal-overlay" id="modal-delete">
+    <div class="adm-modal" style="max-width:420px;">
+      <div class="adm-modal-header">
+        <h3>⚠️ Delete Worker</h3>
+        <button class="adm-modal-close" onclick="closeModal('modal-delete')">&times;</button>
+      </div>
+      <div class="adm-modal-body" style="text-align:center;padding:2rem;">
+        <p id="delete-msg" style="color:rgba(255,255,255,0.6);margin-bottom:1.5rem;"></p>
+        <div style="display:flex;gap:1rem;justify-content:center;margin-top:0.5rem;">
+          <button class="adm-btn adm-btn-ghost" onclick="closeModal('modal-delete')">Cancel</button>
+          <button class="adm-btn adm-btn-danger" id="confirm-delete-btn" style="min-width:140px;">🗑️ Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { loadScript } from './firebase-init.js';
+    await loadScript('data.js');
+    await loadScript('admin-data.js');
+    await loadScript('admin.js');
+
+    (function() {
+      requireAdminAuth();
+      seedDataIfEmpty();
+
+      const PER_PAGE = 10;
+      let currentPage = 1;
+      let filteredWorkers = [];
+      let deleteTargetId = null;
+      let editPicBase64 = null;
+
+      const layout = document.getElementById('admin-layout');
+      layout.innerHTML = adminSidebarHTML('workers') + `
+        <main class="admin-main">
+          ${adminTopbarHTML('Workers Management')}
+          <div class="admin-content">
+            <div class="table-toolbar">
+              <div class="toolbar-left">
+                <input type="text" class="adm-search" id="search-input" placeholder="Search workers...">
+                <select class="adm-select" id="filter-category">
+                  <option value="">All Categories</option>
+                </select>
+                <select class="adm-select" id="filter-avail">
+                  <option value="">All Status</option>
+                  <option value="true">Available</option>
+                  <option value="false">Unavailable</option>
+                </select>
+              </div>
+              <button class="adm-btn adm-btn-primary" id="btn-add-worker">➕ Add Worker</button>
+            </div>
+
+            <div class="adm-table-wrap">
+              <table class="adm-table" id="workers-table">
+                <thead>
+                  <tr>
+                    <th>Worker</th>
+                    <th>Category</th>
+                    <th>Rating</th>
+                    <th>Status</th>
+                    <th>Reviews</th>
+                    <th style="text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="workers-tbody"></tbody>
+              </table>
+            </div>
+            <div class="adm-pagination" id="pagination"></div>
+          </div>
+        </main>
+      `;
+
+      initAdminCommon();
+
+      // Populate category filter
+      const catSelect = document.getElementById('filter-category');
+      ADMIN_CATEGORIES.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c; opt.textContent = c;
+        catSelect.appendChild(opt);
+      });
+
+      // Populate form category
+      document.getElementById('wf-category').innerHTML = categoryOptionsHtml('');
+
+      // ── Render Table ──
+      function renderWorkers() {
+        const search = document.getElementById('search-input').value.toLowerCase();
+        const catFilter = document.getElementById('filter-category').value;
+        const availFilter = document.getElementById('filter-avail').value;
+
+        let workers = adminGetWorkers();
+
+        if (search) {
+          workers = workers.filter(w =>
+            w.name.toLowerCase().includes(search) ||
+            w.email.toLowerCase().includes(search) ||
+            (w.location || '').toLowerCase().includes(search)
+          );
+        }
+        if (catFilter) workers = workers.filter(w => w.category === catFilter);
+        if (availFilter) workers = workers.filter(w => String(w.available) === availFilter);
+
+        filteredWorkers = workers;
+        const totalPages = Math.max(1, Math.ceil(workers.length / PER_PAGE));
+        if (currentPage > totalPages) currentPage = totalPages;
+        const start = (currentPage - 1) * PER_PAGE;
+        const pageWorkers = workers.slice(start, start + PER_PAGE);
+
+        const tbody = document.getElementById('workers-tbody');
+        if (pageWorkers.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:3rem;color:rgba(255,255,255,0.3);">No workers found.</td></tr>`;
+        } else {
+          tbody.innerHTML = pageWorkers.map((w, i) => {
+            const avg = w.ratings && w.ratings.length > 0
+              ? (w.ratings.reduce((s, r) => s + r.stars, 0) / w.ratings.length).toFixed(1)
+              : '—';
+            const avatarSrc = adminGetAvatarSrc(w);
+            return `
+              <tr class="adm-row-in" style="animation-delay:${i * 50}ms;">
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <img src="${avatarSrc}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
+                    <div>
+                      <div style="font-weight:600;">${escHtml(w.name)}</div>
+                      <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);">${escHtml(w.email)}</div>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="badge ${adminGetCategoryBadgeClass(w.category)}">${escHtml(w.category)}</span></td>
+                <td><span style="font-family:'JetBrains Mono',monospace;color:#F4A820;">${avg}</span></td>
+                <td>
+                  <label class="adm-toggle adm-toggle-sm">
+                    <input type="checkbox" ${(w.availability !== false) ? 'checked' : ''} onchange="toggleAvail('${w.id}', this.checked)">
+                    <span class="adm-toggle-slider"></span>
+                  </label>
+                </td>
+                <td style="font-family:'JetBrains Mono',monospace;">${(w.ratings || []).length}</td>
+                <td style="text-align:right;">
+                  <div class="action-btns">
+                    <button class="adm-btn-icon" title="View" onclick="viewWorker('${w.id}')">👁</button>
+                    <button class="adm-btn-icon" title="Edit" onclick="editWorker('${w.id}')">✏️</button>
+                    <button class="adm-btn-icon danger" title="Delete" onclick="confirmDelete('${w.id}')">🗑️</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+        // Pagination
+        renderPagination(totalPages);
+      }
+
+      function renderPagination(totalPages) {
+        const pag = document.getElementById('pagination');
+        if (totalPages <= 1) { pag.innerHTML = ''; return; }
+        let html = `<button class="adm-page-btn" ${currentPage <= 1 ? 'disabled' : ''} onclick="goPage(${currentPage - 1})">‹</button>`;
+        for (let i = 1; i <= totalPages; i++) {
+          html += `<button class="adm-page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+        }
+        html += `<button class="adm-page-btn" ${currentPage >= totalPages ? 'disabled' : ''} onclick="goPage(${currentPage + 1})">›</button>`;
+        pag.innerHTML = html;
+      }
+
+      window.goPage = function(p) { currentPage = p; renderWorkers(); };
+
+      // ── Filters ──
+      document.getElementById('search-input').addEventListener('input', () => { currentPage = 1; renderWorkers(); });
+      document.getElementById('filter-category').addEventListener('change', () => { currentPage = 1; renderWorkers(); });
+      document.getElementById('filter-avail').addEventListener('change', () => { currentPage = 1; renderWorkers(); });
+
+      // ── Toggle Availability ──
+      window.toggleAvail = function(id, available) {
+        adminToggleAvailability(id, available);
+        logAdminActivity('toggle', `Toggled worker availability: ${available ? 'Available' : 'Unavailable'}`);
+        adminShowToast('Availability updated', 'success');
+      };
+
+      // ── View Worker ──
+      window.viewWorker = function(id) {
+        const w = adminGetUserById(id);
+        if (!w) return;
+        const avg = w.ratings && w.ratings.length > 0
+          ? (w.ratings.reduce((s, r) => s + r.stars, 0) / w.ratings.length).toFixed(1)
+          : 'No ratings';
+        const avatarSrc = adminGetAvatarSrc(w);
+        document.getElementById('view-worker-body').innerHTML = `
+          <div style="text-align:center;margin-bottom:1.5rem;">
+            <img src="${avatarSrc}" alt="" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:0.75rem;">
+            <h3 style="color:#fff;margin:0;">${escHtml(w.name)}</h3>
+            <span class="badge ${adminGetCategoryBadgeClass(w.category)}" style="margin-top:0.5rem;display:inline-block;">${escHtml(w.category)}</span>
+          </div>
+          <div class="detail-grid">
+            <div class="detail-item"><span class="detail-label">Email</span><span class="detail-value">${escHtml(w.email)}</span></div>
+            <div class="detail-item"><span class="detail-label">Phone</span><span class="detail-value">${escHtml(w.phone || '—')}</span></div>
+            <div class="detail-item"><span class="detail-label">Location</span><span class="detail-value">${escHtml(w.location || '—')}</span></div>
+            <div class="detail-item"><span class="detail-label">Experience</span><span class="detail-value">${w.experience || 0} years</span></div>
+            <div class="detail-item"><span class="detail-label">Rating</span><span class="detail-value" style="color:#F4A820;">${adminRenderStars(parseFloat(avg) || 0)} ${avg}</span></div>
+            <div class="detail-item"><span class="detail-label">Available</span><span class="detail-value">${w.availability !== false ? '✅ Yes' : '❌ No'}</span></div>
+          </div>
+          ${w.bio ? `<div style="margin-top:1rem;padding:1rem;background:rgba(255,255,255,0.03);border-radius:8px;color:rgba(255,255,255,0.6);font-size:0.85rem;">${escHtml(w.bio)}</div>` : ''}
+        `;
+        openModal('modal-view-worker');
+      };
+
+      // ── Add Worker ──
+      document.getElementById('btn-add-worker').addEventListener('click', () => {
+        document.getElementById('modal-worker-title').textContent = 'Add Worker';
+        document.getElementById('wf-submit-btn').textContent = 'Save Worker';
+        document.getElementById('worker-form').reset();
+        document.getElementById('wf-id').value = '';
+        document.getElementById('wf-available').checked = true;
+        document.getElementById('wf-category').innerHTML = categoryOptionsHtml('');
+        editPicBase64 = null;
+        openModal('modal-worker');
+      });
+
+      // ── Edit Worker ──
+      window.editWorker = function(id) {
+        const w = adminGetUserById(id);
+        if (!w) return;
+        document.getElementById('modal-worker-title').textContent = 'Edit Worker';
+        document.getElementById('wf-submit-btn').textContent = 'Update Worker';
+        document.getElementById('wf-id').value = w.id;
+        document.getElementById('wf-name').value = w.name;
+        document.getElementById('wf-email').value = w.email;
+        document.getElementById('wf-category').innerHTML = categoryOptionsHtml(w.category);
+        document.getElementById('wf-experience').value = w.experience || 0;
+        document.getElementById('wf-location').value = w.city || w.location || '';
+        document.getElementById('wf-phone').value = w.phone || '';
+        document.getElementById('wf-bio').value = w.bio || '';
+        document.getElementById('wf-available').checked = w.availability !== false;
+        editPicBase64 = w.profilePic || null;
+        openModal('modal-worker');
+      };
+
+      // ── Save/Update Worker ──
+      document.getElementById('worker-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('wf-id').value;
+        const name = document.getElementById('wf-name').value.trim();
+        const email = document.getElementById('wf-email').value.trim();
+        const category = document.getElementById('wf-category').value;
+        const experience = parseInt(document.getElementById('wf-experience').value) || 0;
+        const location = document.getElementById('wf-location').value.trim();
+        const phone = document.getElementById('wf-phone').value.trim();
+        const bio = document.getElementById('wf-bio').value.trim();
+        const available = document.getElementById('wf-available').checked;
+
+        if (!name || !email || !category) {
+          adminShowToast('Please fill required fields', 'error');
+          return;
+        }
+
+        const picInput = document.getElementById('wf-pic');
+        const saveFn = (pic) => {
+          if (id) {
+            // Update — field names match the registration schema
+            const updates = { name, email, category, experience, city: location, phone, bio, availability: available };
+            if (pic) updates.profilePicture = pic;
+            adminUpdateUser(id, updates);
+            logAdminActivity('update', `Updated worker: ${name}`);
+            adminShowToast('Worker updated! Syncing to Firestore...', 'success');
+          } else {
+            // Create
+            const existing = adminGetUsers().find(u => u.email.toLowerCase() === email.toLowerCase());
+            if (existing) {
+              adminShowToast('Email already exists!', 'error');
+              return;
+            }
+            adminCreateUser({
+              type: 'worker', name, email, password: 'default123',
+              category, experience, city: location, phone, bio, availability: available,
+              profilePicture: pic || null
+            });
+            logAdminActivity('create', `Created worker: ${name}`);
+            adminShowToast('Worker created! Syncing to Firestore...', 'success');
+          }
+          closeModal('modal-worker');
+          renderWorkers();
+        };
+
+        if (picInput.files[0]) {
+          fileToBase64(picInput, saveFn);
+        } else {
+          saveFn(editPicBase64);
+        }
+      });
+
+      // ── Delete Worker ──
+      window.confirmDelete = function(id) {
+        const w = adminGetUserById(id);
+        if (!w) return;
+        deleteTargetId = id;
+        document.getElementById('delete-msg').innerHTML = `Are you sure you want to delete <strong>${escHtml(w.name)}</strong>? This will also remove all their reviews.`;
+        openModal('modal-delete');
+      };
+
+      // Delete confirmation button
+      document.getElementById('confirm-delete-btn').addEventListener('click', async function() {
+        if (!deleteTargetId) return;
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Deleting...';
+        const w = adminGetUserById(deleteTargetId);
+        try {
+          await adminDeleteUser(deleteTargetId);
+          logAdminActivity('delete', `Deleted worker: ${w ? w.name : 'Unknown'}`);
+          adminShowToast('Worker deleted from Firestore.', 'info');
+        } catch(e) {
+          adminShowToast('Delete failed: ' + e.message, 'error');
+        }
+        deleteTargetId = null;
+        btn.disabled = false;
+        btn.textContent = '🗑️ Delete';
+        closeModal('modal-delete');
+        renderWorkers();
+        updateBellBadge();
+      });
+
+      renderWorkers();
+    })();
+  </script>
+</body>
+</html>
