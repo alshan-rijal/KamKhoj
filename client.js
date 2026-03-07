@@ -98,6 +98,79 @@
     renderAssignments();
   };
 
+  // Cancel task handler
+  window.handleCancelTask = function(taskId) {
+    const task = getAssignmentById(taskId);
+    if (!task) return;
+    document.getElementById('cancel-task-id').value = taskId;
+    document.getElementById('cancel-task-msg').innerHTML = `Are you sure you want to cancel the task "<strong style="color:var(--accent);">${escapeHtml(task.title)}</strong>"? This cannot be undone.`;
+    document.getElementById('cancel-modal').classList.add('active');
+  };
+
+  // Cancel modal listeners
+  const cancelModal = document.getElementById('cancel-modal');
+  document.getElementById('cancel-modal-close').addEventListener('click', () => cancelModal.classList.remove('active'));
+  cancelModal.addEventListener('click', (e) => { if (e.target === cancelModal) cancelModal.classList.remove('active'); });
+  document.getElementById('cancel-modal-no').addEventListener('click', () => cancelModal.classList.remove('active'));
+  document.getElementById('cancel-modal-yes').addEventListener('click', () => {
+    const taskId = document.getElementById('cancel-task-id').value;
+    updateAssignment(taskId, { status: 'cancelled', cancelledAt: new Date().toISOString() });
+    cancelModal.classList.remove('active');
+    showToast('Task cancelled.', 'info');
+    renderAssignments();
+  });
+
+  // Respond to worker's time proposal
+  window.handleRespondToTime = function(taskId) {
+    const task = getAssignmentById(taskId);
+    if (!task) return;
+    document.getElementById('counter-time-task-id').value = taskId;
+    document.getElementById('counter-time-client').textContent = task.clientTimeEstimate || 'Not set';
+    document.getElementById('counter-time-worker').textContent = task.workerTimeEstimate || 'Not set';
+    document.getElementById('counter-time-value').value = '';
+    document.getElementById('counter-time-error').classList.remove('visible');
+    document.getElementById('counter-time-value').classList.remove('error');
+    document.getElementById('counter-time-modal').classList.add('active');
+  };
+
+  // Counter time modal listeners
+  const counterTimeModal = document.getElementById('counter-time-modal');
+  document.getElementById('counter-time-modal-close').addEventListener('click', () => counterTimeModal.classList.remove('active'));
+  counterTimeModal.addEventListener('click', (e) => { if (e.target === counterTimeModal) counterTimeModal.classList.remove('active'); });
+
+  // Accept worker's proposed time
+  document.getElementById('counter-time-accept').addEventListener('click', () => {
+    const taskId = document.getElementById('counter-time-task-id').value;
+    const task = getAssignmentById(taskId);
+    if (task) {
+      updateAssignment(taskId, { clientTimeEstimate: task.workerTimeEstimate });
+    }
+    counterTimeModal.classList.remove('active');
+    showToast('Worker\'s time estimate accepted!', 'success');
+    renderAssignments();
+  });
+
+  // Send a different time
+  document.getElementById('counter-time-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const newTime = document.getElementById('counter-time-value').value.trim();
+    if (!newTime) {
+      document.getElementById('counter-time-error').classList.add('visible');
+      document.getElementById('counter-time-value').classList.add('error');
+      return;
+    }
+    const taskId = document.getElementById('counter-time-task-id').value;
+    updateAssignment(taskId, { clientTimeEstimate: newTime, workerTimeEstimate: '' });
+    counterTimeModal.classList.remove('active');
+    showToast('New time estimate sent to worker.', 'success');
+    renderAssignments();
+  });
+
+  document.getElementById('counter-time-value').addEventListener('input', () => {
+    document.getElementById('counter-time-error').classList.remove('visible');
+    document.getElementById('counter-time-value').classList.remove('error');
+  });
+
   /* ── My Assignments Section ── */
   function renderAssignments() {
     const section = document.getElementById('assignments-section');
@@ -112,6 +185,7 @@
     const active = allAssignments.filter(a => ['pending', 'accepted', 'not-started', 'ongoing'].includes(a.status));
     const completed = allAssignments.filter(a => ['completed', 'confirmed'].includes(a.status));
     const rejected = allAssignments.filter(a => a.status === 'rejected');
+    const cancelled = allAssignments.filter(a => a.status === 'cancelled');
 
     section.innerHTML = `
       <div class="card anim-fade-in-up" style="margin-bottom:var(--sp-lg);">
@@ -120,6 +194,7 @@
           <button class="section-tab active" data-tab="c-active">Active <span class="tab-count">${active.length}</span></button>
           <button class="section-tab" data-tab="c-completed">Completed <span class="tab-count">${completed.length}</span></button>
           <button class="section-tab" data-tab="c-rejected">Rejected <span class="tab-count">${rejected.length}</span></button>
+          <button class="section-tab" data-tab="c-cancelled">Cancelled <span class="tab-count">${cancelled.length}</span></button>
         </div>
         <div id="client-tasks-container"></div>
       </div>
@@ -134,6 +209,7 @@
         case 'c-active': tasks = active; break;
         case 'c-completed': tasks = completed; break;
         case 'c-rejected': tasks = rejected; break;
+        case 'c-cancelled': tasks = cancelled; break;
         default: tasks = active;
       }
 
@@ -149,6 +225,7 @@
           pending: '⏳ Pending',
           accepted: '✅ Accepted',
           rejected: '❌ Rejected',
+          cancelled: '🚫 Cancelled',
           'not-started': '📋 Not Started',
           ongoing: '🔄 Ongoing',
           completed: '✓ Completed',
@@ -173,10 +250,27 @@
         }
 
         let actionHtml = '';
+        // Cancel button for tasks not yet started (pending, accepted, not-started)
+        const canCancel = ['pending', 'accepted', 'not-started'].includes(task.status);
+        // Time negotiation: worker proposed a different time
+        const hasWorkerTimeProposal = task.workerTimeEstimate && task.workerTimeEstimate !== task.clientTimeEstimate;
+
         if (task.status === 'confirmed' && !task.reviewedAt) {
           actionHtml = `<div class="assignment-actions"><a href="worker-profile.html?id=${task.workerId}" class="btn btn-primary btn-sm">⭐ Leave Review</a></div>`;
         } else if (task.status === 'completed') {
           actionHtml = `<div class="assignment-actions"><button class="btn btn-primary btn-sm" onclick="handleConfirmTask('${task.id}')">✅ Confirm Done</button></div>`;
+        }
+
+        // Add cancel + time response buttons for active tasks
+        if (canCancel || (hasWorkerTimeProposal && ['pending', 'accepted', 'not-started', 'ongoing'].includes(task.status))) {
+          actionHtml += '<div class="assignment-actions" style="margin-top:6px;">';
+          if (hasWorkerTimeProposal && ['pending', 'accepted', 'not-started', 'ongoing'].includes(task.status)) {
+            actionHtml += `<button class="btn btn-secondary btn-sm" onclick="handleRespondToTime('${task.id}')">⏱ Respond to Time</button>`;
+          }
+          if (canCancel) {
+            actionHtml += `<button class="btn btn-danger btn-sm" onclick="handleCancelTask('${task.id}')">🚫 Cancel Task</button>`;
+          }
+          actionHtml += '</div>';
         }
 
         return `

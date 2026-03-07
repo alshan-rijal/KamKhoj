@@ -362,6 +362,7 @@
     const active = allTasks.filter(t => ['accepted', 'not-started', 'ongoing'].includes(t.status));
     const completed = allTasks.filter(t => ['completed', 'confirmed'].includes(t.status));
     const rejected = allTasks.filter(t => t.status === 'rejected');
+    const cancelled = allTasks.filter(t => t.status === 'cancelled');
 
     // Update tab counts
     const pendingCount = document.getElementById('tab-count-pending');
@@ -377,6 +378,7 @@
       case 'active': tasks = active; break;
       case 'completed': tasks = completed; break;
       case 'rejected': tasks = rejected; break;
+      case 'cancelled': tasks = cancelled; break;
       default: tasks = pending;
     }
 
@@ -385,7 +387,8 @@
         pending: 'No pending task requests.',
         active: 'No active tasks.',
         completed: 'No completed tasks yet.',
-        rejected: 'No rejected tasks.'
+        rejected: 'No rejected tasks.',
+        cancelled: 'No cancelled tasks.'
       };
       tasksContainer.innerHTML = `
         <div class="empty-state" style="padding:2rem;">
@@ -442,6 +445,9 @@
       if (task.status === 'rejected' && task.rejectionReason) {
         rejectionHtml = `<div class="rejection-reason">❌ Reason: ${escapeHtml(task.rejectionReason)}</div>`;
       }
+      if (task.status === 'cancelled') {
+        rejectionHtml = `<div class="rejection-reason" style="background:rgba(var(--secondary-rgb),0.1);border-color:rgba(var(--secondary-rgb),0.3);"><span style="color:var(--secondary);">🚫 Cancelled by client</span>${task.cancelledAt ? ` on ${formatDate(task.cancelledAt)}` : ''}</div>`;
+      }
 
       return `
         <div class="assignment-card">
@@ -472,6 +478,7 @@
       pending: '⏳ Pending',
       accepted: '✅ Accepted',
       rejected: '❌ Rejected',
+      cancelled: '🚫 Cancelled',
       'not-started': '📋 Not Started',
       ongoing: '🔄 Ongoing',
       completed: '✓ Completed',

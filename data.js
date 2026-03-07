@@ -294,7 +294,7 @@ function createAssignment(data) {
     workerId: data.workerId,
     title: data.title,
     description: data.description || '',
-    status: 'pending',           // pending → accepted/rejected → not-started → ongoing → completed → confirmed
+    status: 'pending',           // pending → accepted/rejected/cancelled → not-started → ongoing → completed → confirmed
     rejectionReason: '',
     clientTimeEstimate: data.clientTimeEstimate || '',
     workerTimeEstimate: '',
