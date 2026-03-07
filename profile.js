@@ -33,6 +33,7 @@
   const statRating = document.getElementById('stat-rating');
   const statWorks = document.getElementById('stat-works');
   const statReviews = document.getElementById('stat-reviews');
+  const assignWorkWrapper = document.getElementById('assign-work-wrapper');
   const reviewFormWrapper = document.getElementById('review-form-wrapper');
   const reviewsContainer = document.getElementById('reviews-container');
 
@@ -55,6 +56,7 @@
 
     renderProfileHero();
     renderStats();
+    renderAssignWorkForm();
     renderReviewForm();
     renderReviews();
   }
@@ -93,26 +95,146 @@
     animateCountUp(statReviews, reviewCount, 1000);
   }
 
-  /* ── Review Form ── */
+  /* ── Assign Work Form (for clients) ── */
+  function renderAssignWorkForm() {
+    if (!isClient) {
+      assignWorkWrapper.innerHTML = '';
+      return;
+    }
+
+    // Block assignment if worker is busy
+    if (!worker.availability) {
+      assignWorkWrapper.innerHTML = `
+        <div class="review-form-card" style="margin-bottom:var(--sp-lg);">
+          <h3 style="margin-bottom:var(--sp-md);">📋 Assign Work to ${escapeHtml(worker.name)}</h3>
+          <div style="text-align:center;padding:var(--sp-lg);">
+            <div style="font-size:2rem;margin-bottom:var(--sp-sm);">🚫</div>
+            <p style="color:var(--danger);font-weight:600;margin-bottom:var(--sp-xs);">Worker is Currently Busy</p>
+            <p style="color:var(--text-muted);font-size:0.85rem;">This worker is not accepting new tasks right now. Please check back later or find another available worker.</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    assignWorkWrapper.innerHTML = `
+      <div class="review-form-card" style="margin-bottom:var(--sp-lg);">
+        <h3 style="margin-bottom:var(--sp-md);">📋 Assign Work to ${escapeHtml(worker.name)}</h3>
+        <form id="assign-work-form" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="assign-title">Task Title</label>
+            <input class="form-input" type="text" id="assign-title" placeholder="e.g. Kitchen renovation, Garden cleanup..." maxlength="100">
+            <div class="form-error" id="assign-title-error">Title is required</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="assign-desc">Task Description</label>
+            <textarea class="form-textarea" id="assign-desc" rows="3" placeholder="Describe the work in detail..." maxlength="500"></textarea>
+            <div class="char-counter" id="assign-desc-counter">0/500</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="assign-time">Time Estimate (e.g. "3 days", "2 weeks", "5 hours")</label>
+            <input class="form-input" type="text" id="assign-time" placeholder="e.g. 3 days" maxlength="50">
+            <div class="form-error" id="assign-time-error">Time estimate is required</div>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <span class="spinner"></span>
+            <span class="btn-text">Assign Work</span>
+          </button>
+        </form>
+      </div>
+    `;
+
+    setupAssignWorkForm();
+  }
+
+  function setupAssignWorkForm() {
+    const form = document.getElementById('assign-work-form');
+    const descInput = document.getElementById('assign-desc');
+    const descCounter = document.getElementById('assign-desc-counter');
+    if (!form) return;
+
+    descInput.addEventListener('input', () => {
+      descCounter.textContent = `${descInput.value.length}/500`;
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const title = document.getElementById('assign-title').value.trim();
+      const desc = descInput.value.trim();
+      const time = document.getElementById('assign-time').value.trim();
+      let valid = true;
+
+      if (!title) {
+        document.getElementById('assign-title-error').classList.add('visible');
+        document.getElementById('assign-title').classList.add('error');
+        valid = false;
+      } else {
+        document.getElementById('assign-title-error').classList.remove('visible');
+        document.getElementById('assign-title').classList.remove('error');
+      }
+      if (!time) {
+        document.getElementById('assign-time-error').classList.add('visible');
+        document.getElementById('assign-time').classList.add('error');
+        valid = false;
+      } else {
+        document.getElementById('assign-time-error').classList.remove('visible');
+        document.getElementById('assign-time').classList.remove('error');
+      }
+
+      if (!valid) return;
+
+      const btn = form.querySelector('.btn');
+      btn.classList.add('loading');
+
+      setTimeout(() => {
+        btn.classList.remove('loading');
+        createAssignment({
+          clientId: session.userId,
+          workerId: workerId,
+          title: title,
+          description: desc,
+          clientTimeEstimate: time
+        });
+        showToast('Work assigned successfully! Waiting for worker response.', 'success');
+        form.reset();
+        descCounter.textContent = '0/500';
+      }, 500);
+    });
+
+    // Clear errors on input
+    ['assign-title', 'assign-time'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => {
+        document.getElementById(id).classList.remove('error');
+        document.getElementById(id + '-error').classList.remove('visible');
+      });
+    });
+  }
+
+  /* ── Review Form — only for confirmed assignments ── */
   function renderReviewForm() {
     if (!isClient) {
       reviewFormWrapper.innerHTML = '';
       return;
     }
 
-    if (hasClientReviewed(workerId, session.userId)) {
-      reviewFormWrapper.innerHTML = `
-        <div class="review-form-card" style="text-align:center;">
-          <p style="color:var(--text-muted);">✅ You have already reviewed this worker.</p>
-        </div>
-      `;
+    // Get confirmed assignments that haven't been reviewed yet
+    const reviewableAssignments = getConfirmedUnreviewedByClient(session.userId, workerId);
+
+    if (reviewableAssignments.length === 0) {
+      reviewFormWrapper.innerHTML = '';
       return;
     }
 
+    // Show review form for the first reviewable assignment
+    const assignment = reviewableAssignments[0];
     reviewFormWrapper.innerHTML = `
       <div class="review-form-card">
-        <h3 style="margin-bottom:var(--sp-md);">Leave a Review</h3>
+        <h3 style="margin-bottom:var(--sp-sm);">Leave a Review</h3>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:var(--sp-md);">
+          For task: <strong style="color:var(--accent);">${escapeHtml(assignment.title)}</strong>
+        </p>
         <form id="review-form" novalidate>
+          <input type="hidden" id="review-assignment-id" value="${assignment.id}">
           <div class="form-group">
             <label class="form-label">Your Rating</label>
             <div class="star-rating-input" id="star-input">
@@ -137,6 +259,10 @@
         </form>
       </div>
     `;
+
+    if (reviewableAssignments.length > 1) {
+      reviewFormWrapper.innerHTML += `<p style="color:var(--text-muted);font-size:0.85rem;margin-top:var(--sp-sm);">You have ${reviewableAssignments.length - 1} more assignment(s) to review after this one.</p>`;
+    }
 
     setupStarInput();
     setupReviewForm();
@@ -224,15 +350,20 @@
       setTimeout(() => {
         btn.classList.remove('loading');
 
+        const assignmentId = document.getElementById('review-assignment-id').value;
+
         const rating = {
           clientId: session.userId,
           clientName: currentUser.name,
           stars: selectedStars,
           comment: comment,
+          assignmentId: assignmentId,
           date: new Date().toISOString()
         };
 
         addRating(workerId, rating);
+        // Mark assignment as reviewed
+        updateAssignment(assignmentId, { reviewedAt: new Date().toISOString() });
         showToast('Review submitted successfully!', 'success');
         selectedStars = 0;
         renderAll();

@@ -254,6 +254,99 @@ function requireAuth(expectedType) {
   return session;
 }
 
+/* ═══════════════════════════════════════
+   ASSIGNMENTS SYSTEM
+   ═══════════════════════════════════════ */
+
+function getAssignments() {
+  return window._wfcAssignmentsCache || [];
+}
+
+function saveAssignments(assignments) {
+  window._wfcAssignmentsCache = [...assignments];
+  localStorage.setItem('wfc_assignments', JSON.stringify(assignments));
+  _syncAssignmentsToFirestore(assignments);
+}
+
+async function _syncAssignmentsToFirestore(assignments) {
+  const { doc, setDoc } = window._fs;
+  const db = window._db;
+  try {
+    await Promise.all(assignments.map(a => setDoc(doc(db, 'assignments', a.id), JSON.parse(JSON.stringify(a)))));
+    console.log('Assignments Firestore sync OK:', assignments.length);
+  } catch (e) {
+    console.error('Assignments Firestore sync error:', e);
+  }
+}
+
+function _writeAssignment(assignment) {
+  const { doc, setDoc } = window._fs;
+  return setDoc(doc(window._db, 'assignments', assignment.id), JSON.parse(JSON.stringify(assignment)))
+    .then(() => console.log('Assignment write OK:', assignment.id))
+    .catch(e => console.error('Assignment write error:', e));
+}
+
+function createAssignment(data) {
+  const assignments = getAssignments();
+  const assignment = {
+    id: generateId(),
+    clientId: data.clientId,
+    workerId: data.workerId,
+    title: data.title,
+    description: data.description || '',
+    status: 'pending',           // pending → accepted/rejected → not-started → ongoing → completed → confirmed
+    rejectionReason: '',
+    clientTimeEstimate: data.clientTimeEstimate || '',
+    workerTimeEstimate: '',
+    createdAt: new Date().toISOString(),
+    acceptedAt: null,
+    completedAt: null,
+    confirmedAt: null,
+    reviewedAt: null
+  };
+  assignments.push(assignment);
+  window._wfcAssignmentsCache = [...assignments];
+  localStorage.setItem('wfc_assignments', JSON.stringify(assignments));
+  _writeAssignment(assignment);
+  return assignment;
+}
+
+function updateAssignment(id, updates) {
+  const assignments = getAssignments();
+  const idx = assignments.findIndex(a => a.id === id);
+  if (idx === -1) return false;
+  assignments[idx] = { ...assignments[idx], ...updates };
+  window._wfcAssignmentsCache = [...assignments];
+  localStorage.setItem('wfc_assignments', JSON.stringify(assignments));
+  _writeAssignment(assignments[idx]);
+  return true;
+}
+
+function getAssignmentById(id) {
+  return getAssignments().find(a => a.id === id) || null;
+}
+
+function getAssignmentsByWorker(workerId) {
+  return getAssignments().filter(a => a.workerId === workerId);
+}
+
+function getAssignmentsByClient(clientId) {
+  return getAssignments().filter(a => a.clientId === clientId);
+}
+
+function getCompletedUnconfirmedByClient(clientId) {
+  return getAssignments().filter(a => a.clientId === clientId && a.status === 'completed');
+}
+
+function getConfirmedUnreviewedByClient(clientId, workerId) {
+  return getAssignments().filter(a =>
+    a.clientId === clientId &&
+    a.workerId === workerId &&
+    a.status === 'confirmed' &&
+    !a.reviewedAt
+  );
+}
+
 /* ── Seed Data (disabled — no demo data) ── */
 function seedDataIfEmpty() {
   // No-op: demo data removed

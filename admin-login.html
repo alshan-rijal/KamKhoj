@@ -11,14 +11,14 @@
   <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
   <style>
     /* ---- Login-specific overrides ---- */
-    body { margin: 0; min-height: 100vh; display: flex; background: var(--admin-bg, #0a0a0a); }
+    body { margin: 0; min-height: 100vh; display: flex; background: var(--bg-primary); }
     .login-split { display: flex; width: 100%; min-height: 100vh; }
 
     /* Left: animated mesh */
     .login-left {
       flex: 1; display: flex; align-items: center; justify-content: center;
       position: relative; overflow: hidden;
-      background: linear-gradient(135deg, #0d0d0d 0%, #141414 100%);
+      background: linear-gradient(135deg, var(--admin-sidebar-bg) 0%, var(--admin-card-bg) 100%);
     }
     .mesh-grid {
       position: absolute; inset: 0;
@@ -48,20 +48,20 @@
     .login-left-content h2 {
       font-family: 'Barlow Condensed', sans-serif; font-size: 3rem;
       font-weight: 700; text-transform: uppercase; letter-spacing: 3px;
-      color: #fff; margin-bottom: 1rem;
+      color: var(--admin-text); margin-bottom: 1rem;
     }
     .login-left-content h2 span { color: var(--accent, #F4A820); }
     .login-left-content p {
-      color: rgba(255,255,255,0.5); font-size: 1rem; max-width: 320px; margin: 0 auto;
+      color: var(--admin-muted); font-size: 1rem; max-width: 320px; margin: 0 auto;
     }
 
     /* Right: form card */
     .login-right {
       flex: 1; display: flex; align-items: center; justify-content: center;
-      padding: 2rem; background: #111;
+      padding: 2rem; background: var(--bg-primary);
     }
     .login-card {
-      width: 100%; max-width: 400px; background: rgba(30,30,30,0.7);
+      width: 100%; max-width: 400px; background: var(--admin-card-bg);
       backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.06);
       border-radius: 16px; padding: 2.5rem 2rem;
       animation: loginCardIn 0.8s cubic-bezier(0.34,1.56,0.64,1) both;
@@ -79,7 +79,7 @@
     }
     .login-card h1 {
       font-family: 'Barlow Condensed', sans-serif; font-size: 1.8rem;
-      font-weight: 700; color: #fff; margin-bottom: 0.5rem; text-transform: uppercase;
+      font-weight: 700; color: var(--admin-text); margin-bottom: 0.5rem; text-transform: uppercase;
       letter-spacing: 1px;
     }
     .login-card .subtitle {
@@ -87,12 +87,12 @@
     }
     .field { margin-bottom: 1.25rem; }
     .field label {
-      display: block; font-size: 0.75rem; color: rgba(255,255,255,0.5);
+      display: block; font-size: 0.75rem; color: var(--admin-muted);
       margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;
     }
     .field .input-wrap {
       position: relative; display: flex; align-items: center;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      background: var(--bg-primary); border: 1px solid var(--admin-border);
       border-radius: 10px; transition: border-color 0.3s, box-shadow 0.3s;
     }
     .field .input-wrap:focus-within {
@@ -100,12 +100,12 @@
       box-shadow: 0 0 0 3px rgba(244,168,32,0.1);
     }
     .field input {
-      flex: 1; background: none; border: none; color: #fff; padding: 12px 14px;
+      flex: 1; background: none; border: none; color: var(--admin-text); padding: 12px 14px;
       font-size: 0.95rem; font-family: 'DM Sans', sans-serif; outline: none;
     }
-    .field input::placeholder { color: rgba(255,255,255,0.25); }
+    .field input::placeholder { color: var(--admin-muted); }
     .toggle-pw {
-      background: none; border: none; color: rgba(255,255,255,0.3);
+      background: none; border: none; color: var(--admin-muted);
       cursor: pointer; padding: 0 12px; font-size: 1.1rem; transition: color 0.2s;
     }
     .toggle-pw:hover { color: var(--accent, #F4A820); }
@@ -135,7 +135,7 @@
     .login-btn.loading .spinner { display: block; }
     .back-link {
       display: block; text-align: center; margin-top: 1.5rem;
-      color: rgba(255,255,255,0.3); font-size: 0.8rem; text-decoration: none;
+      color: var(--admin-muted); font-size: 0.8rem; text-decoration: none;
       transition: color 0.2s;
     }
     .back-link:hover { color: var(--accent, #F4A820); }

@@ -62,6 +62,20 @@ try {
 }
 window._wfcUsersCache = users;
 
+// ── Load assignments — Firestore is source of truth ──
+let assignments = [];
+try {
+  const assignSnap = await getDocs(collection(db, 'assignments'));
+  assignSnap.forEach(d => assignments.push(d.data()));
+  localStorage.setItem('wfc_assignments', JSON.stringify(assignments));
+  console.log('Loaded', assignments.length, 'assignments from Firestore.');
+} catch (e) {
+  console.warn('Firestore assignments read failed, using localStorage:', e);
+  const localAssign = localStorage.getItem('wfc_assignments');
+  if (localAssign) assignments = JSON.parse(localAssign);
+}
+window._wfcAssignmentsCache = assignments;
+
 // ── Load admin activity — Firestore is source of truth ──
 let activities = [];
 try {

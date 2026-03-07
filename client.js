@@ -33,6 +33,8 @@
 
   /* ── Initialize ── */
   renderNav();
+  renderNotifications();
+  renderAssignments();
 
   // Show skeleton for a brief moment, then render
   setTimeout(() => {
@@ -46,6 +48,174 @@
     navAvatar.src = getAvatarSrc(client);
     ddName.textContent = client.name;
     ddEmail.textContent = client.email;
+  }
+
+  /* ── Notifications for completed tasks ── */
+  function renderNotifications() {
+    const container = document.getElementById('notifications-container');
+    if (!container) return;
+    const completedTasks = getCompletedUnconfirmedByClient(client.id);
+
+    if (completedTasks.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+
+    container.innerHTML = completedTasks.map(task => {
+      const worker = getUserById(task.workerId);
+      const workerName = worker ? escapeHtml(worker.name) : 'A worker';
+      return `
+        <div class="notification-banner anim-fade-in-up">
+          <div class="notification-banner-icon">🔔</div>
+          <div class="notification-banner-text">
+            <strong>${workerName}</strong> has completed the task "<strong>${escapeHtml(task.title)}</strong>".
+            Is the work done satisfactorily?
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0;">
+            <button class="btn btn-primary btn-sm" onclick="handleConfirmTask('${task.id}')">✅ Confirm Done</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Confirm task handler
+  window.handleConfirmTask = function(taskId) {
+    const task = getAssignmentById(taskId);
+    updateAssignment(taskId, {
+      status: 'confirmed',
+      confirmedAt: new Date().toISOString()
+    });
+    // Increment worker's worksCompleted only after client approval
+    if (task) {
+      const worker = getUserById(task.workerId);
+      if (worker) {
+        updateUser(worker.id, { worksCompleted: (worker.worksCompleted || 0) + 1 });
+      }
+    }
+    showToast('Task confirmed! You can now leave a review for this worker.', 'success');
+    renderNotifications();
+    renderAssignments();
+  };
+
+  /* ── My Assignments Section ── */
+  function renderAssignments() {
+    const section = document.getElementById('assignments-section');
+    if (!section) return;
+
+    const allAssignments = getAssignmentsByClient(client.id);
+    if (allAssignments.length === 0) {
+      section.innerHTML = '';
+      return;
+    }
+
+    const active = allAssignments.filter(a => ['pending', 'accepted', 'not-started', 'ongoing'].includes(a.status));
+    const completed = allAssignments.filter(a => ['completed', 'confirmed'].includes(a.status));
+    const rejected = allAssignments.filter(a => a.status === 'rejected');
+
+    section.innerHTML = `
+      <div class="card anim-fade-in-up" style="margin-bottom:var(--sp-lg);">
+        <h3 style="margin-bottom:var(--sp-md);">📋 My Assignments</h3>
+        <div class="section-tabs" id="client-task-tabs">
+          <button class="section-tab active" data-tab="c-active">Active <span class="tab-count">${active.length}</span></button>
+          <button class="section-tab" data-tab="c-completed">Completed <span class="tab-count">${completed.length}</span></button>
+          <button class="section-tab" data-tab="c-rejected">Rejected <span class="tab-count">${rejected.length}</span></button>
+        </div>
+        <div id="client-tasks-container"></div>
+      </div>
+    `;
+
+    let currentTab = 'c-active';
+
+    function renderClientTasks() {
+      const container = document.getElementById('client-tasks-container');
+      let tasks;
+      switch (currentTab) {
+        case 'c-active': tasks = active; break;
+        case 'c-completed': tasks = completed; break;
+        case 'c-rejected': tasks = rejected; break;
+        default: tasks = active;
+      }
+
+      if (tasks.length === 0) {
+        container.innerHTML = `<div class="empty-state" style="padding:2rem;"><p class="empty-state-text">No tasks in this category.</p></div>`;
+        return;
+      }
+
+      container.innerHTML = tasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(task => {
+        const worker = getUserById(task.workerId);
+        const workerName = worker ? escapeHtml(worker.name) : 'Unknown Worker';
+        const statusLabels = {
+          pending: '⏳ Pending',
+          accepted: '✅ Accepted',
+          rejected: '❌ Rejected',
+          'not-started': '📋 Not Started',
+          ongoing: '🔄 Ongoing',
+          completed: '✓ Completed',
+          confirmed: '🏆 Confirmed'
+        };
+
+        let timeHtml = '';
+        if (task.clientTimeEstimate || task.workerTimeEstimate) {
+          timeHtml = '<div class="time-estimates">';
+          if (task.clientTimeEstimate) {
+            timeHtml += `<div class="time-estimate-item"><div class="time-estimate-label">Your Estimate</div><div class="time-estimate-value">${escapeHtml(task.clientTimeEstimate)}</div></div>`;
+          }
+          if (task.workerTimeEstimate) {
+            timeHtml += `<div class="time-estimate-item"><div class="time-estimate-label">Worker's Estimate</div><div class="time-estimate-value">${escapeHtml(task.workerTimeEstimate)}</div></div>`;
+          }
+          timeHtml += '</div>';
+        }
+
+        let rejectionHtml = '';
+        if (task.status === 'rejected' && task.rejectionReason) {
+          rejectionHtml = `<div class="rejection-reason">❌ Reason: ${escapeHtml(task.rejectionReason)}</div>`;
+        }
+
+        let actionHtml = '';
+        if (task.status === 'confirmed' && !task.reviewedAt) {
+          actionHtml = `<div class="assignment-actions"><a href="worker-profile.html?id=${task.workerId}" class="btn btn-primary btn-sm">⭐ Leave Review</a></div>`;
+        } else if (task.status === 'completed') {
+          actionHtml = `<div class="assignment-actions"><button class="btn btn-primary btn-sm" onclick="handleConfirmTask('${task.id}')">✅ Confirm Done</button></div>`;
+        }
+
+        return `
+          <div class="assignment-card">
+            <div class="assignment-card-header">
+              <div>
+                <div class="assignment-card-title">${escapeHtml(task.title)}</div>
+                <div class="assignment-worker-info">
+                  ${worker ? `<img class="assignment-avatar" src="${getAvatarSrc(worker)}" alt="${workerName}">` : ''}
+                  <span style="font-size:0.85rem;color:var(--text-muted);">Worker: <strong style="color:var(--text-primary);">${workerName}</strong></span>
+                </div>
+              </div>
+              <span class="status-badge status-${task.status}">${statusLabels[task.status] || task.status}</span>
+            </div>
+            ${task.description ? `<div class="assignment-card-desc">${escapeHtml(task.description)}</div>` : ''}
+            ${timeHtml}
+            ${rejectionHtml}
+            <div class="assignment-meta">
+              <span class="assignment-meta-item">📅 Assigned: ${formatDate(task.createdAt)}</span>
+              ${task.completedAt ? `<span class="assignment-meta-item">✅ Completed: ${formatDate(task.completedAt)}</span>` : ''}
+              ${task.confirmedAt ? `<span class="assignment-meta-item">🏆 Confirmed: ${formatDate(task.confirmedAt)}</span>` : ''}
+            </div>
+            ${actionHtml}
+          </div>
+        `;
+      }).join('');
+    }
+
+    renderClientTasks();
+
+    // Tab switching
+    document.querySelectorAll('#client-task-tabs .section-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('#client-task-tabs .section-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentTab = tab.dataset.tab;
+        renderClientTasks();
+      });
+    });
   }
 
   /* ── Render Workers ── */
