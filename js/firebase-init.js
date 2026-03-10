@@ -76,6 +76,21 @@ try {
 }
 window._wfcAssignmentsCache = assignments;
 
+// ── Load payment settings from Firestore ──
+let paymentSettings = { esewaQR: '', khaltiQR: '', bankQR: '', bankAccountNumber: '', bankName: '', esewaName: '', khaltiName: '' };
+try {
+  const payDoc = await getDoc(doc(db, 'config', 'payment_settings'));
+  if (payDoc.exists()) {
+    paymentSettings = payDoc.data();
+    localStorage.setItem('wfc_payment_settings', JSON.stringify(paymentSettings));
+  }
+} catch (e) {
+  console.warn('Payment settings read failed, using localStorage:', e);
+  const localPay = localStorage.getItem('wfc_payment_settings');
+  if (localPay) paymentSettings = JSON.parse(localPay);
+}
+window._wfcPaymentSettingsCache = paymentSettings;
+
 // ── Load admin activity — Firestore is source of truth ──
 let activities = [];
 try {

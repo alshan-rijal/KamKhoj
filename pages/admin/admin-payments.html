@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payments — Admin | WorkForce Connect</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="../../css/admin.css">
+  <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+</head>
+<body>
+  <div class="admin-layout" id="admin-layout">
+    <!-- Sidebar + Topbar injected by JS -->
+  </div>
+
+  <!-- Screenshot Preview Modal -->
+  <div class="adm-modal-overlay" id="modal-screenshot">
+    <div class="adm-modal" style="max-width:500px;">
+      <div class="adm-modal-header">
+        <h3>Payment Screenshot</h3>
+        <button class="adm-modal-close" onclick="closeModal('modal-screenshot')">&times;</button>
+      </div>
+      <div class="adm-modal-body" style="text-align:center;padding:1.5rem;">
+        <img id="screenshot-preview-img" src="" alt="Payment Screenshot" style="max-width:100%;border-radius:8px;border:1px solid rgba(255,255,255,0.1);">
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { loadScript } from '../../js/firebase-init.js';
+    await loadScript('../../js/data.js');
+    await loadScript('../../js/admin-data.js');
+    await loadScript('../../js/admin.js');
+
+    (function() {
+      requireAdminAuth();
+
+      const layout = document.getElementById('admin-layout');
+      layout.innerHTML = adminSidebarHTML('payments') + `
+        <main class="admin-main">
+          ${adminTopbarHTML('Manage Payments')}
+          <div class="admin-content" id="payments-content">
+
+            <!-- Stat Cards -->
+            <div class="stat-cards">
+              <div class="stat-card" style="--delay:0">
+                <div class="stat-icon">📥</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="stat-submitted">0</div>
+                  <div class="stat-label">Pending Verification</div>
+                </div>
+              </div>
+              <div class="stat-card" style="--delay:1">
+                <div class="stat-icon">💸</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="stat-workers-to-pay">0</div>
+                  <div class="stat-label">Workers to Pay</div>
+                </div>
+              </div>
+              <div class="stat-card" style="--delay:2">
+                <div class="stat-icon">✅</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="stat-verified">0</div>
+                  <div class="stat-label">Verified</div>
+                </div>
+              </div>
+              <div class="stat-card" style="--delay:3">
+                <div class="stat-icon">💰</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="stat-total-payments">0</div>
+                  <div class="stat-label">Total Payments</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- QR Code Management -->
+            <div class="admin-section">
+              <h2 class="section-title">💳 Payment QR Codes & Account Info</h2>
+              <p style="color:rgba(255,255,255,0.5);font-size:0.85rem;margin-bottom:1.5rem;">Upload QR codes that clients will see when making payments. These are YOUR (admin's) payment accounts.</p>
+              <div class="qr-management-grid">
+                <!-- eSewa -->
+                <div class="qr-card">
+                  <h4>📱 eSewa</h4>
+                  <div class="qr-preview-wrapper">
+                    <img id="esewa-qr-preview" src="" alt="eSewa QR" class="qr-preview-img" style="display:none;">
+                    <div id="esewa-qr-empty" class="qr-empty">No QR uploaded</div>
+                  </div>
+                  <div class="form-group" style="margin-top:0.75rem;">
+                    <input class="form-input adm-input" type="text" id="esewa-name" placeholder="eSewa Account Name/Number">
+                  </div>
+                  <div class="file-upload-wrapper">
+                    <label class="adm-btn adm-btn-info adm-btn-sm" for="esewa-qr-input" style="cursor:pointer;">📷 Upload QR</label>
+                    <input type="file" id="esewa-qr-input" accept="image/*" style="display:none;">
+                  </div>
+                  <button class="adm-btn adm-btn-danger adm-btn-sm" id="esewa-qr-remove" style="margin-top:0.5rem;display:none;">Remove</button>
+                </div>
+
+                <!-- Khalti -->
+                <div class="qr-card">
+                  <h4>💜 Khalti</h4>
+                  <div class="qr-preview-wrapper">
+                    <img id="khalti-qr-preview" src="" alt="Khalti QR" class="qr-preview-img" style="display:none;">
+                    <div id="khalti-qr-empty" class="qr-empty">No QR uploaded</div>
+                  </div>
+                  <div class="form-group" style="margin-top:0.75rem;">
+                    <input class="form-input adm-input" type="text" id="khalti-name" placeholder="Khalti Account Name/Number">
+                  </div>
+                  <div class="file-upload-wrapper">
+                    <label class="adm-btn adm-btn-info adm-btn-sm" for="khalti-qr-input" style="cursor:pointer;">📷 Upload QR</label>
+                    <input type="file" id="khalti-qr-input" accept="image/*" style="display:none;">
+                  </div>
+                  <button class="adm-btn adm-btn-danger adm-btn-sm" id="khalti-qr-remove" style="margin-top:0.5rem;display:none;">Remove</button>
+                </div>
+
+                <!-- Bank -->
+                <div class="qr-card">
+                  <h4>🏦 Bank Transfer</h4>
+                  <div class="qr-preview-wrapper">
+                    <img id="bank-qr-preview" src="" alt="Bank QR" class="qr-preview-img" style="display:none;">
+                    <div id="bank-qr-empty" class="qr-empty">No QR uploaded</div>
+                  </div>
+                  <div class="form-group" style="margin-top:0.75rem;">
+                    <input class="form-input adm-input" type="text" id="bank-name" placeholder="Bank Name">
+                  </div>
+                  <div class="form-group">
+                    <input class="form-input adm-input" type="text" id="bank-account" placeholder="Account Number">
+                  </div>
+                  <div class="file-upload-wrapper">
+                    <label class="adm-btn adm-btn-info adm-btn-sm" for="bank-qr-input" style="cursor:pointer;">📷 Upload QR</label>
+                    <input type="file" id="bank-qr-input" accept="image/*" style="display:none;">
+                  </div>
+                  <button class="adm-btn adm-btn-danger adm-btn-sm" id="bank-qr-remove" style="margin-top:0.5rem;display:none;">Remove</button>
+                </div>
+              </div>
+              <button class="adm-btn adm-btn-primary" id="save-qr-settings" style="margin-top:1.5rem;">💾 Save Payment Settings</button>
+            </div>
+
+            <!-- Payment Submissions -->
+            <div class="admin-section">
+              <h2 class="section-title">📋 Payment Management</h2>
+              <div class="section-tabs" id="payment-tabs" style="margin-bottom:1rem;">
+                <button class="section-tab active" data-tab="pay-pending">Pending</button>
+                <button class="section-tab" data-tab="pay-workers">Pay Workers</button>
+                <button class="section-tab" data-tab="pay-paid">Paid</button>
+                <button class="section-tab" data-tab="pay-rejected">Rejected</button>
+                <button class="section-tab" data-tab="pay-all">All</button>
+              </div>
+              <div id="payments-list"></div>
+            </div>
+
+            <!-- Worker Payment Info -->
+            <div class="admin-section">
+              <h2 class="section-title">👷 Worker Payment Details</h2>
+              <p style="color:rgba(255,255,255,0.5);font-size:0.85rem;margin-bottom:1rem;">Payment info provided by workers (for admin to pay them). This is NOT visible to clients.</p>
+              <div id="worker-payment-list"></div>
+            </div>
+
+          </div>
+        </main>
+      `;
+
+      initAdminCommon();
+
+      // ═══ LOAD QR SETTINGS ═══
+      const settings = adminGetPaymentSettings();
+      loadQRSettings(settings);
+
+      function loadQRSettings(s) {
+        // eSewa
+        if (s.esewaQR) {
+          document.getElementById('esewa-qr-preview').src = s.esewaQR;
+          document.getElementById('esewa-qr-preview').style.display = 'block';
+          document.getElementById('esewa-qr-empty').style.display = 'none';
+          document.getElementById('esewa-qr-remove').style.display = '';
+        }
+        document.getElementById('esewa-name').value = s.esewaName || '';
+
+        // Khalti
+        if (s.khaltiQR) {
+          document.getElementById('khalti-qr-preview').src = s.khaltiQR;
+          document.getElementById('khalti-qr-preview').style.display = 'block';
+          document.getElementById('khalti-qr-empty').style.display = 'none';
+          document.getElementById('khalti-qr-remove').style.display = '';
+        }
+        document.getElementById('khalti-name').value = s.khaltiName || '';
+
+        // Bank
+        if (s.bankQR) {
+          document.getElementById('bank-qr-preview').src = s.bankQR;
+          document.getElementById('bank-qr-preview').style.display = 'block';
+          document.getElementById('bank-qr-empty').style.display = 'none';
+          document.getElementById('bank-qr-remove').style.display = '';
+        }
+        document.getElementById('bank-name').value = s.bankName || '';
+        document.getElementById('bank-account').value = s.bankAccountNumber || '';
+      }
+
+      // QR file uploads — compress before storing (Firestore 1MB doc limit)
+      function setupQRUpload(inputId, previewId, emptyId, removeId) {
+        document.getElementById(inputId).addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          if (file.size > 3 * 1024 * 1024) {
+            adminShowToast('Image must be under 3MB', 'error');
+            e.target.value = '';
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = async (ev) => {
+            const compressed = await compressImage(ev.target.result, 400, 0.8);
+            document.getElementById(previewId).src = compressed;
+            document.getElementById(previewId).style.display = 'block';
+            document.getElementById(emptyId).style.display = 'none';
+            document.getElementById(removeId).style.display = '';
+          };
+          reader.readAsDataURL(file);
+        });
+        document.getElementById(removeId).addEventListener('click', () => {
+          document.getElementById(previewId).src = '';
+          document.getElementById(previewId).style.display = 'none';
+          document.getElementById(emptyId).style.display = '';
+          document.getElementById(removeId).style.display = 'none';
+        });
+      }
+
+      setupQRUpload('esewa-qr-input', 'esewa-qr-preview', 'esewa-qr-empty', 'esewa-qr-remove');
+      setupQRUpload('khalti-qr-input', 'khalti-qr-preview', 'khalti-qr-empty', 'khalti-qr-remove');
+      setupQRUpload('bank-qr-input', 'bank-qr-preview', 'bank-qr-empty', 'bank-qr-remove');
+
+      // Save QR settings
+      document.getElementById('save-qr-settings').addEventListener('click', async () => {
+        const esewaPreview = document.getElementById('esewa-qr-preview');
+        const khaltiPreview = document.getElementById('khalti-qr-preview');
+        const bankPreview = document.getElementById('bank-qr-preview');
+        const btn = document.getElementById('save-qr-settings');
+        btn.disabled = true;
+        btn.textContent = '⏳ Saving...';
+        const newSettings = {
+          esewaQR: esewaPreview.style.display !== 'none' ? esewaPreview.src : '',
+          khaltiQR: khaltiPreview.style.display !== 'none' ? khaltiPreview.src : '',
+          bankQR: bankPreview.style.display !== 'none' ? bankPreview.src : '',
+          esewaName: document.getElementById('esewa-name').value.trim(),
+          khaltiName: document.getElementById('khalti-name').value.trim(),
+          bankName: document.getElementById('bank-name').value.trim(),
+          bankAccountNumber: document.getElementById('bank-account').value.trim()
+        };
+        try {
+          window._wfcPaymentSettingsCache = { ...newSettings };
+          localStorage.setItem('wfc_payment_settings', JSON.stringify(newSettings));
+          const { doc: fbDoc, setDoc: fbSet } = window._fs;
+          await fbSet(fbDoc(window._db, 'config', 'payment_settings'), newSettings);
+          adminShowToast('Payment settings saved successfully!', 'success');
+        } catch (e) {
+          console.error('Payment settings save error:', e);
+          adminShowToast('Failed to save to database. Images may be too large — try smaller files.', 'error');
+        }
+        btn.disabled = false;
+        btn.textContent = '💾 Save Payment Settings';
+      });
+
+      // ═══ PAYMENT SUBMISSIONS ═══
+      let currentPayTab = 'pay-pending';
+
+      function renderPayments() {
+        const allPayments = adminGetPayments();
+        const submitted = allPayments.filter(a => a.paymentStatus === 'submitted');
+        const verified = allPayments.filter(a => a.paymentStatus === 'verified' && a.workerPaymentStatus !== 'paid');
+        const needsWorkerPay = allPayments.filter(a => a.paymentStatus === 'verified' && a.workerPaymentStatus !== 'paid');
+        const paid = allPayments.filter(a => a.workerPaymentStatus === 'paid');
+        const rejected = allPayments.filter(a => a.paymentStatus === 'rejected');
+
+        // Stats
+        adminAnimateCountUp(document.getElementById('stat-submitted'), submitted.length);
+        adminAnimateCountUp(document.getElementById('stat-workers-to-pay'), needsWorkerPay.length);
+        adminAnimateCountUp(document.getElementById('stat-verified'), verified.length + paid.length);
+        adminAnimateCountUp(document.getElementById('stat-total-payments'), allPayments.length);
+
+        // Update tab counts
+        document.querySelector('[data-tab="pay-pending"]').innerHTML = `Pending <span class="tab-count">${submitted.length}</span>`;
+        document.querySelector('[data-tab="pay-workers"]').innerHTML = `Pay Workers <span class="tab-count">${needsWorkerPay.length}</span>`;
+        document.querySelector('[data-tab="pay-paid"]').innerHTML = `Paid <span class="tab-count">${paid.length}</span>`;
+        document.querySelector('[data-tab="pay-rejected"]').innerHTML = `Rejected <span class="tab-count">${rejected.length}</span>`;
+
+        let payments;
+        switch (currentPayTab) {
+          case 'pay-pending': payments = submitted; break;
+          case 'pay-workers': payments = needsWorkerPay; break;
+          case 'pay-paid': payments = paid; break;
+          case 'pay-rejected': payments = rejected; break;
+          default: payments = allPayments;
+        }
+
+        const container = document.getElementById('payments-list');
+        if (payments.length === 0) {
+          const emptyMessages = {
+            'pay-pending': 'No payments awaiting verification.',
+            'pay-workers': 'No workers to pay right now.',
+            'pay-paid': 'No completed payments yet.',
+            'pay-rejected': 'No rejected payments.',
+            'pay-all': 'No payment activity yet.'
+          };
+          container.innerHTML = `<p class="pay-card-muted" style="text-align:center;padding:2rem;">${emptyMessages[currentPayTab] || 'No payments.'}</p>`;
+          return;
+        }
+
+        const methodLabels = { esewa: '📱 eSewa', khalti: '💜 Khalti', bank: '🏦 Bank' };
+
+        // "Pay Workers" tab shows a special card layout with worker payment info
+        if (currentPayTab === 'pay-workers') {
+          container.innerHTML = payments.sort((a, b) => new Date(b.paymentVerifiedAt || b.createdAt) - new Date(a.paymentVerifiedAt || a.createdAt)).map(p => {
+            const client = adminGetUserById(p.clientId);
+            const worker = adminGetUserById(p.workerId);
+            const pi = worker && worker.paymentInfo ? worker.paymentInfo : {};
+            const agreedPrice = p.workerPriceEstimate || p.clientPriceEstimate || 'N/A';
+            let workerPayInfoHtml = '<div class="pay-card-muted" style="font-size:0.85rem;">No payment info provided by worker</div>';
+            if (pi.esewa || pi.khalti || pi.bankAccount) {
+              workerPayInfoHtml = '<div style="display:flex;flex-wrap:wrap;gap:0.75rem;font-size:0.85rem;">';
+              if (pi.esewa) workerPayInfoHtml += `<div><strong>📱 eSewa:</strong> ${escHtml(pi.esewa)}</div>`;
+              if (pi.khalti) workerPayInfoHtml += `<div><strong>💜 Khalti:</strong> ${escHtml(pi.khalti)}</div>`;
+              if (pi.bankName || pi.bankAccount) workerPayInfoHtml += `<div><strong>🏦 Bank:</strong> ${escHtml(pi.bankName || '')} ${pi.bankAccount ? '— ' + escHtml(pi.bankAccount) : ''}</div>`;
+              workerPayInfoHtml += '</div>';
+            }
+            return `
+              <div class="pay-worker-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+                  <div>
+                    <strong style="font-size:1.05rem;">${escHtml(p.title || 'Untitled')}</strong>
+                    <div class="pay-card-muted" style="font-size:0.8rem;margin-top:2px;">Client: ${client ? escHtml(client.name) : 'Unknown'} → Worker: ${worker ? escHtml(worker.name) : 'Unknown'}</div>
+                  </div>
+                  <div style="font-size:1.4rem;font-weight:700;color:var(--admin-accent);">Rs. ${escHtml(agreedPrice)}</div>
+                </div>
+                <div class="pay-worker-info-box">
+                  <div class="pay-card-muted" style="font-size:0.75rem;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.05em;">Pay Worker Via:</div>
+                  ${workerPayInfoHtml}
+                </div>
+                <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                  <span class="adm-badge adm-badge-warning">💰 Payment Due</span>
+                  <span class="pay-card-muted" style="font-size:0.8rem;">Paid via ${methodLabels[p.paymentMethod] || 'Unknown'} by client</span>
+                  <div style="margin-left:auto;">
+                    ${p.paymentScreenshot ? `<button class="adm-btn adm-btn-info adm-btn-sm" onclick="viewScreenshot('${p.id}')" style="margin-right:0.5rem;">👁 Receipt</button>` : ''}
+                    <button class="adm-btn adm-btn-success adm-btn-sm" onclick="markWorkerPaid('${p.id}')">💸 Mark as Paid</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+          return;
+        }
+
+        // Default table view for other tabs
+        const statusLabels = { submitted: '⏳ Pending', verified: '✅ Verified', rejected: '❌ Rejected' };
+        container.innerHTML = `
+          <div class="admin-table-wrapper pay-table-responsive">
+            <table class="adm-table">
+              <thead>
+                <tr>
+                  <th>Task</th>
+                  <th>Client</th>
+                  <th>Worker</th>
+                  <th>Method</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Screenshot</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${payments.sort((a, b) => new Date(b.paymentSubmittedAt || b.createdAt) - new Date(a.paymentSubmittedAt || a.createdAt)).map(p => {
+                  const client = adminGetUserById(p.clientId);
+                  const worker = adminGetUserById(p.workerId);
+                  const agreedPrice = p.workerPriceEstimate || p.clientPriceEstimate || 'N/A';
+                  let statusBadge = '';
+                  if (p.workerPaymentStatus === 'paid') {
+                    statusBadge = '<span class="adm-badge adm-badge-success">✅ Fully Paid</span>';
+                  } else if (p.paymentStatus === 'verified') {
+                    statusBadge = '<span class="adm-badge adm-badge-warning">⏳ Worker Unpaid</span>';
+                  } else if (p.paymentStatus === 'rejected') {
+                    statusBadge = '<span class="adm-badge adm-badge-danger">❌ Rejected</span>';
+                  } else {
+                    statusBadge = '<span class="adm-badge adm-badge-warning">⏳ Pending</span>';
+                  }
+
+                  let actionsHtml = '';
+                  if (p.paymentStatus === 'submitted') {
+                    actionsHtml = `
+                      <button class="adm-btn adm-btn-success adm-btn-sm" onclick="verifyPayment('${p.id}')">✅ Verify</button>
+                      <button class="adm-btn adm-btn-danger adm-btn-sm" onclick="rejectPayment('${p.id}')">❌ Reject</button>
+                    `;
+                  } else if (p.workerPaymentStatus === 'paid') {
+                    actionsHtml = `
+                      <span class="pay-card-muted" style="font-size:0.85rem;">✅ Done</span>
+                      <button class="adm-btn adm-btn-danger adm-btn-sm" onclick="removePaymentHistory('${p.id}')" title="Remove from history">🗑</button>
+                    `;
+                  } else if (p.paymentStatus === 'verified') {
+                    actionsHtml = `<button class="adm-btn adm-btn-success adm-btn-sm" onclick="markWorkerPaid('${p.id}')">💸 Pay Worker</button>`;
+                  } else if (p.paymentStatus === 'rejected') {
+                    actionsHtml = `
+                      <button class="adm-btn adm-btn-success adm-btn-sm" onclick="verifyPayment('${p.id}')">✅ Re-verify</button>
+                      <button class="adm-btn adm-btn-danger adm-btn-sm" onclick="removePaymentHistory('${p.id}')" title="Remove from history">🗑</button>
+                    `;
+                  }
+
+                  return `
+                    <tr>
+                      <td data-label="Task"><strong>${escHtml(p.title || 'Untitled')}</strong></td>
+                      <td data-label="Client">${client ? escHtml(client.name) : 'Unknown'}</td>
+                      <td data-label="Worker">${worker ? escHtml(worker.name) : 'Unknown'}</td>
+                      <td data-label="Method">${methodLabels[p.paymentMethod] || p.paymentMethod || 'N/A'}</td>
+                      <td data-label="Amount" style="color:#F4A820;font-weight:600;">Rs. ${escHtml(agreedPrice)}</td>
+                      <td data-label="Status">${statusBadge}</td>
+                      <td data-label="Screenshot">${p.paymentScreenshot ? `<button class="adm-btn adm-btn-info adm-btn-sm" onclick="viewScreenshot('${p.id}')">👁 View</button>` : '<span class="pay-card-muted">None</span>'}</td>
+                      <td class="pay-td-actions">${actionsHtml}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      // Tab switching
+      document.querySelectorAll('#payment-tabs .section-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('#payment-tabs .section-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          currentPayTab = tab.dataset.tab;
+          renderPayments();
+        });
+      });
+
+      // Payment actions
+      window.verifyPayment = function(taskId) {
+        adminUpdateAssignment(taskId, {
+          paymentStatus: 'verified',
+          paymentVerifiedAt: new Date().toISOString(),
+          workerPaymentStatus: 'pending'
+        });
+        adminShowToast('Payment verified! Worker can now start work.', 'success');
+        renderPayments();
+      };
+
+      window.rejectPayment = function(taskId) {
+        adminUpdateAssignment(taskId, {
+          paymentStatus: 'rejected'
+        });
+        adminShowToast('Payment rejected. Client will be notified.', 'info');
+        renderPayments();
+      };
+
+      window.markWorkerPaid = function(taskId) {
+        if (!confirm('Confirm you have paid the worker for this task?')) return;
+        adminUpdateAssignment(taskId, {
+          workerPaymentStatus: 'paid',
+          workerPaidAt: new Date().toISOString()
+        });
+        adminShowToast('Worker marked as paid!', 'success');
+        renderPayments();
+      };
+
+      window.viewScreenshot = function(taskId) {
+        const task = adminGetAssignmentById(taskId);
+        if (task && task.paymentScreenshot) {
+          document.getElementById('screenshot-preview-img').src = task.paymentScreenshot;
+          openModal('modal-screenshot');
+        } else {
+          adminShowToast('No screenshot available for this payment.', 'error');
+        }
+      };
+
+      window.removePaymentHistory = function(taskId) {
+        if (!confirm('Remove this payment record from history? The task assignment will remain but payment data will be cleared.')) return;
+        adminUpdateAssignment(taskId, {
+          paymentStatus: '',
+          paymentMethod: '',
+          paymentScreenshot: '',
+          paymentSubmittedAt: '',
+          paymentVerifiedAt: '',
+          workerPaymentStatus: '',
+          workerPaidAt: ''
+        });
+        adminShowToast('Payment record removed from history.', 'info');
+        renderPayments();
+      };
+
+      renderPayments();
+
+      // ═══ WORKER PAYMENT INFO ═══
+      function renderWorkerPayments() {
+        const workers = adminGetWorkersWithPaymentInfo();
+        const container = document.getElementById('worker-payment-list');
+
+        if (workers.length === 0) {
+          container.innerHTML = `<p class="pay-card-muted" style="text-align:center;padding:2rem;">No workers have submitted payment info yet.</p>`;
+          return;
+        }
+
+        container.innerHTML = `
+          <div class="admin-table-wrapper pay-table-responsive">
+            <table class="adm-table">
+              <thead>
+                <tr>
+                  <th>Worker</th>
+                  <th>Category</th>
+                  <th>eSewa</th>
+                  <th>Khalti</th>
+                  <th>Bank Name</th>
+                  <th>Bank Account</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${workers.map(w => {
+                  const pi = w.paymentInfo || {};
+                  return `
+                    <tr>
+                      <td data-label="Worker"><strong>${escHtml(w.name)}</strong></td>
+                      <td data-label="Category">${escHtml(w.category || '')}</td>
+                      <td data-label="eSewa">${pi.esewa ? escHtml(pi.esewa) : '<span class="pay-card-muted">—</span>'}</td>
+                      <td data-label="Khalti">${pi.khalti ? escHtml(pi.khalti) : '<span class="pay-card-muted">—</span>'}</td>
+                      <td data-label="Bank Name">${pi.bankName ? escHtml(pi.bankName) : '<span class="pay-card-muted">—</span>'}</td>
+                      <td data-label="Bank Account">${pi.bankAccount ? escHtml(pi.bankAccount) : '<span class="pay-card-muted">—</span>'}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      renderWorkerPayments();
+
+    })();
+  </script>
+</body>
+</html>

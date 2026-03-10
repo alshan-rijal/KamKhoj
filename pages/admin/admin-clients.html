@@ -6,8 +6,8 @@
   <title>Clients — Admin | WorkForce Connect</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="../../css/admin.css">
   <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 </head>
 <body>
@@ -85,10 +85,10 @@
   </div>
 
   <script type="module">
-    import { loadScript } from './firebase-init.js';
-    await loadScript('data.js');
-    await loadScript('admin-data.js');
-    await loadScript('admin.js');
+    import { loadScript } from '../../js/firebase-init.js';
+    await loadScript('../../js/data.js');
+    await loadScript('../../js/admin-data.js');
+    await loadScript('../../js/admin.js');
 
     (function() {
       requireAdminAuth();

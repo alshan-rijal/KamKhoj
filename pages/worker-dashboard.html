@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WorkForce Connect — Worker Dashboard</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../css/style.css">
   <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 </head>
 <body>
@@ -145,6 +145,28 @@
         </div>
       </div>
 
+      <!-- Price Counter-Proposal Modal -->
+      <div class="modal-overlay" id="price-modal">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>Propose Different Price</h3>
+            <button class="modal-close" id="price-modal-close">✕</button>
+          </div>
+          <div class="modal-body">
+            <form id="price-form" novalidate>
+              <input type="hidden" id="price-task-id">
+              <p style="color:var(--text-muted);margin-bottom:var(--sp-md);font-size:0.9rem;">Client's price: <strong id="price-client-estimate" style="color:var(--accent);"></strong></p>
+              <div class="form-group">
+                <label class="form-label" for="price-proposal">Your Price (e.g. "Rs. 8000")</label>
+                <input class="form-input" type="text" id="price-proposal" placeholder="e.g. Rs. 8000" maxlength="50">
+                <div class="form-error" id="price-proposal-error">Price is required</div>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block">Submit Price</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
       <!-- My Reviews -->
       <div class="card anim-fade-in-up stagger-6">
         <h3 style="margin-bottom:var(--sp-lg);">My Reviews</h3>
@@ -220,6 +242,32 @@
             <div class="char-counter" id="edit-bio-counter">0/300</div>
             <div class="form-error">Error</div>
           </div>
+
+          <!-- Payment Information (not shown to clients) -->
+          <div style="border-top:1px solid var(--border);padding-top:var(--sp-md);margin-top:var(--sp-md);">
+            <h4 style="margin-bottom:var(--sp-sm);color:var(--accent);font-size:0.95rem;">💳 Payment Information <span style="font-size:0.75rem;color:var(--text-muted);font-weight:400;">(Only visible to admin)</span></h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="edit-pay-esewa">eSewa ID / Number</label>
+                <input class="form-input" type="text" id="edit-pay-esewa" placeholder="e.g. 98XXXXXXXX">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="edit-pay-khalti">Khalti ID / Number</label>
+                <input class="form-input" type="text" id="edit-pay-khalti" placeholder="e.g. 98XXXXXXXX">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="edit-pay-bank-name">Bank Name</label>
+                <input class="form-input" type="text" id="edit-pay-bank-name" placeholder="e.g. NIC Asia Bank">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="edit-pay-bank-account">Bank Account Number</label>
+                <input class="form-input" type="text" id="edit-pay-bank-account" placeholder="e.g. 1234567890">
+              </div>
+            </div>
+          </div>
+
           <button type="submit" class="btn btn-primary btn-block">
             <span class="spinner"></span>
             <span class="btn-text">Save Changes</span>
@@ -230,9 +278,9 @@
   </div>
 
   <script type="module">
-    import { loadScript } from './firebase-init.js';
-    await loadScript('data.js');
-    await loadScript('worker.js');
+    import { loadScript } from '../js/firebase-init.js';
+    await loadScript('../js/data.js');
+    await loadScript('../js/worker.js');
   </script>
   <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">🌙</button>
   <script>(function(){var btn=document.getElementById('theme-toggle-btn');if(!btn)return;btn.textContent=localStorage.getItem('wfc_theme')==='light'?'☀️':'🌙';btn.addEventListener('click',function(){var l=document.documentElement.getAttribute('data-theme')!=='light';l?document.documentElement.setAttribute('data-theme','light'):document.documentElement.removeAttribute('data-theme');btn.textContent=l?'☀️':'🌙';localStorage.setItem('wfc_theme',l?'light':'dark');});})();</script>

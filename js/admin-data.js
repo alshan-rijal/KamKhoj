@@ -198,6 +198,63 @@ function adminGetFlaggedCount() {
   return adminGetAllReviews().filter(r => r.flagged).length;
 }
 
+/* ═══════════════════════════════════════
+   ADMIN PAYMENT MANAGEMENT
+   ═══════════════════════════════════════ */
+
+/* ── Assignments CRUD for admin ── */
+function adminGetAssignments() {
+  return window._wfcAssignmentsCache || [];
+}
+
+function adminGetAssignmentById(id) {
+  return adminGetAssignments().find(a => a.id === id) || null;
+}
+
+function adminUpdateAssignment(id, updates) {
+  const assignments = adminGetAssignments();
+  const idx = assignments.findIndex(a => a.id === id);
+  if (idx === -1) return false;
+  assignments[idx] = { ...assignments[idx], ...updates };
+  window._wfcAssignmentsCache = [...assignments];
+  localStorage.setItem('wfc_assignments', JSON.stringify(assignments));
+  // Write single assignment doc
+  const { doc, setDoc } = window._fs;
+  setDoc(doc(window._db, 'assignments', id), JSON.parse(JSON.stringify(assignments[idx])))
+    .then(() => console.log('Admin assignment write OK:', id))
+    .catch(e => console.error('Admin assignment write error:', e));
+  return true;
+}
+
+/* ── Get all payments (assignments with payment activity) ── */
+function adminGetPayments() {
+  return adminGetAssignments().filter(a => a.paymentScreenshot || a.paymentStatus);
+}
+
+/* ── Payment Settings (admin can manage QR codes) ── */
+function adminGetPaymentSettings() {
+  return window._wfcPaymentSettingsCache || {
+    esewaQR: '', khaltiQR: '', bankQR: '',
+    bankAccountNumber: '', bankName: '',
+    esewaName: '', khaltiName: ''
+  };
+}
+
+function adminSavePaymentSettings(settings) {
+  window._wfcPaymentSettingsCache = { ...settings };
+  localStorage.setItem('wfc_payment_settings', JSON.stringify(settings));
+  const { doc, setDoc } = window._fs;
+  setDoc(doc(window._db, 'config', 'payment_settings'), settings)
+    .then(() => console.log('Admin payment settings sync OK'))
+    .catch(e => console.error('Admin payment settings sync error:', e));
+}
+
+/* ── Get workers with payment info ── */
+function adminGetWorkersWithPaymentInfo() {
+  return adminGetWorkers().filter(w => w.paymentInfo &&
+    (w.paymentInfo.esewa || w.paymentInfo.khalti || w.paymentInfo.bankAccount));
+}
+
 /* ── Activity Log (Firestore + localStorage write-through) ── */
 function getAdminActivity() {
   return window._wfcActivityCache || [];

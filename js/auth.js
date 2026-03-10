@@ -23,7 +23,7 @@
   /* ── If already logged in, redirect ── */
   const session = getSession();
   if (session) {
-    const redirect = session.userType === 'worker' ? 'worker-dashboard.html' : 'client-dashboard.html';
+    const redirect = session.userType === 'worker' ? 'pages/worker-dashboard.html' : 'pages/client-dashboard.html';
     window.location.href = redirect;
     return;
   }
@@ -176,7 +176,7 @@
       showToast('Login successful! Redirecting...', 'success');
       setTimeout(() => {
         document.body.classList.add('page-fade-out');
-        setTimeout(() => { window.location.href = user.type === 'worker' ? 'worker-dashboard.html' : 'client-dashboard.html'; }, 280);
+        setTimeout(() => { window.location.href = user.type === 'worker' ? 'pages/worker-dashboard.html' : 'pages/client-dashboard.html'; }, 280);
       }, 400);
     }, 500);
   });
@@ -231,7 +231,13 @@
         experience: fields.experience.value,
         city: fields.city.value.trim(),
         bio: fields.bio.value.trim(),
-        profilePicture: profilePicture
+        profilePicture: profilePicture,
+        paymentInfo: {
+          esewa: (document.getElementById('reg-worker-pay-esewa') || {}).value?.trim() || '',
+          khalti: (document.getElementById('reg-worker-pay-khalti') || {}).value?.trim() || '',
+          bankName: (document.getElementById('reg-worker-pay-bank-name') || {}).value?.trim() || '',
+          bankAccount: (document.getElementById('reg-worker-pay-bank-account') || {}).value?.trim() || ''
+        }
       });
 
       if (!result.success) {
@@ -245,7 +251,7 @@
       const workerSync = window._pendingFirestoreSync || Promise.resolve();
       Promise.race([workerSync, new Promise(r => setTimeout(r, 4000))]).then(() => {
         document.body.classList.add('page-fade-out');
-        setTimeout(() => { window.location.href = 'worker-dashboard.html'; }, 280);
+        setTimeout(() => { window.location.href = 'pages/worker-dashboard.html'; }, 280);
       });
     }, 500);
   });
@@ -305,7 +311,7 @@
       const clientSync = window._pendingFirestoreSync || Promise.resolve();
       Promise.race([clientSync, new Promise(r => setTimeout(r, 4000))]).then(() => {
         document.body.classList.add('page-fade-out');
-        setTimeout(() => { window.location.href = 'client-dashboard.html'; }, 280);
+        setTimeout(() => { window.location.href = 'pages/client-dashboard.html'; }, 280);
       });
     }, 500);
   });

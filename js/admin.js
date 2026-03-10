@@ -5,7 +5,7 @@
 
 const ADMIN_CREDENTIALS = {
   username: 'admin',
-  password: 'admin123',
+  password: 'admin',
   name: 'System Administrator',
   avatar: null
 };
@@ -222,6 +222,7 @@ function adminSidebarHTML(activePage) {
     { id: 'workers', icon: '👷', label: 'Workers', href: 'admin-workers.html' },
     { id: 'clients', icon: '🧑‍💼', label: 'Clients', href: 'admin-clients.html' },
     { id: 'reviews', icon: '⭐', label: 'Reviews', href: 'admin-reviews.html' },
+    { id: 'payments', icon: '💳', label: 'Payments', href: 'admin-payments.html' },
   ];
   return `
     <aside class="admin-sidebar">

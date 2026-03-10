@@ -32,6 +32,27 @@ function generateId() {
   );
 }
 
+/* ── Image compression (keeps base64 under Firestore 1MB doc limit) ── */
+function compressImage(dataUrl, maxWidth, quality) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxWidth) {
+        h = Math.round(h * maxWidth / w);
+        w = maxWidth;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(dataUrl); // fallback to original if decode fails
+    img.src = dataUrl;
+  });
+}
+
 /* ── Core Read/Write (Firestore + localStorage write-through) ── */
 function getUsers() {
   return window._wfcUsersCache || [];
@@ -111,7 +132,8 @@ function createUser(userData) {
       bio: userData.bio || '',
       availability: true,
       worksCompleted: 0,
-      ratings: []
+      ratings: [],
+      paymentInfo: userData.paymentInfo || { esewa: '', khalti: '', bankName: '', bankAccount: '' }
     } : {})
   };
   users.push(user);
@@ -245,10 +267,20 @@ function animateCountUp(element, target, duration = 1000, decimals = 0) {
 }
 
 /* ── Auth Guards ── */
+function getBasePath() {
+  const scripts = document.querySelectorAll('script[src*="data.js"]');
+  for (const s of scripts) {
+    const src = s.getAttribute('src');
+    const idx = src.indexOf('js/data.js');
+    if (idx !== -1) return src.substring(0, idx);
+  }
+  return '';
+}
+
 function requireAuth(expectedType) {
   const session = getSession();
   if (!session || (expectedType && session.userType !== expectedType)) {
-    window.location.href = 'index.html';
+    window.location.href = getBasePath() + 'index.html';
     return null;
   }
   return session;
@@ -298,6 +330,15 @@ function createAssignment(data) {
     rejectionReason: '',
     clientTimeEstimate: data.clientTimeEstimate || '',
     workerTimeEstimate: '',
+    clientPriceEstimate: data.clientPriceEstimate || '',
+    workerPriceEstimate: '',
+    paymentMethod: '',
+    paymentScreenshot: '',
+    paymentStatus: '',
+    paymentSubmittedAt: null,
+    paymentVerifiedAt: null,
+    workerPaymentStatus: '',
+    workerPaidAt: null,
     createdAt: new Date().toISOString(),
     acceptedAt: null,
     completedAt: null,
@@ -345,6 +386,59 @@ function getConfirmedUnreviewedByClient(clientId, workerId) {
     a.status === 'confirmed' &&
     !a.reviewedAt
   );
+}
+
+/* ═══════════════════════════════════════
+   PAYMENT SETTINGS
+   ═══════════════════════════════════════ */
+
+function getPaymentSettings() {
+  return window._wfcPaymentSettingsCache || {
+    esewaQR: '', khaltiQR: '', bankQR: '',
+    bankAccountNumber: '', bankName: '',
+    esewaName: '', khaltiName: ''
+  };
+}
+
+function savePaymentSettings(settings) {
+  window._wfcPaymentSettingsCache = { ...settings };
+  localStorage.setItem('wfc_payment_settings', JSON.stringify(settings));
+  _syncPaymentSettingsToFirestore(settings);
+}
+
+async function _syncPaymentSettingsToFirestore(settings) {
+  const { doc, setDoc } = window._fs;
+  try {
+    await setDoc(doc(window._db, 'config', 'payment_settings'), settings);
+    console.log('Payment settings Firestore sync OK');
+  } catch (e) {
+    console.error('Payment settings sync error:', e);
+  }
+}
+
+/* ── Helper: Check if price/time are agreed ── */
+function isPriceAgreed(task) {
+  return !task.workerPriceEstimate || task.workerPriceEstimate === task.clientPriceEstimate;
+}
+
+function isTimeAgreed(task) {
+  return !task.workerTimeEstimate || task.workerTimeEstimate === task.clientTimeEstimate;
+}
+
+function isReadyForPayment(task) {
+  return ['not-started', 'accepted'].includes(task.status) &&
+    !task.paymentStatus &&
+    isPriceAgreed(task) &&
+    isTimeAgreed(task);
+}
+
+function isPaymentVerified(task) {
+  return task.paymentStatus === 'verified';
+}
+
+/* ── Get all assignments with payment screenshots (for admin) ── */
+function getPaymentSubmissions() {
+  return getAssignments().filter(a => a.paymentScreenshot || a.paymentStatus);
 }
 
 /* ── Seed Data (disabled — no demo data) ── */

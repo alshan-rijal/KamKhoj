@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WorkForce Connect — Worker Profile</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../css/style.css">
   <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 </head>
 <body>
@@ -93,9 +93,9 @@
   </main>
 
   <script type="module">
-    import { loadScript } from './firebase-init.js';
-    await loadScript('data.js');
-    await loadScript('profile.js');
+    import { loadScript } from '../js/firebase-init.js';
+    await loadScript('../js/data.js');
+    await loadScript('../js/profile.js');
   </script>
   <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">🌙</button>
   <script>(function(){var btn=document.getElementById('theme-toggle-btn');if(!btn)return;btn.textContent=localStorage.getItem('wfc_theme')==='light'?'☀️':'🌙';btn.addEventListener('click',function(){var l=document.documentElement.getAttribute('data-theme')!=='light';l?document.documentElement.setAttribute('data-theme','light'):document.documentElement.removeAttribute('data-theme');btn.textContent=l?'☀️':'🌙';localStorage.setItem('wfc_theme',l?'light':'dark');});})();</script>

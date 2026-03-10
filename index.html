@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WorkForce Connect — Find Skilled Workers</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="css/style.css">
   <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 </head>
 <body>
@@ -134,7 +134,7 @@
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label class="form-label" for="reg-worker-category">Job Category</label>
+                   <label class="form-label" for="reg-worker-category">Job Category</label>
                   <select class="form-select" id="reg-worker-category">
                     <option value="">Select category...</option>
                     <option>Construction Worker</option>
@@ -175,6 +175,32 @@
                 </div>
                 <img id="reg-worker-pic-preview" src="" alt="Preview" style="display:none;width:64px;height:64px;border-radius:50%;object-fit:cover;margin-top:8px;border:2px solid var(--border);">
               </div>
+
+              <!-- Payment Information -->
+              <div style="border-top:1px solid var(--border);padding-top:var(--sp-md);margin-top:var(--sp-sm);">
+                <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:var(--sp-sm);">💳 Payment Info <span style="font-size:0.75rem;">(Optional — for receiving payments from admin)</span></p>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="reg-worker-pay-esewa">eSewa ID</label>
+                    <input class="form-input" type="text" id="reg-worker-pay-esewa" placeholder="e.g. 98XXXXXXXX">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="reg-worker-pay-khalti">Khalti ID</label>
+                    <input class="form-input" type="text" id="reg-worker-pay-khalti" placeholder="e.g. 98XXXXXXXX">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="reg-worker-pay-bank-name">Bank Name</label>
+                    <input class="form-input" type="text" id="reg-worker-pay-bank-name" placeholder="e.g. NIC Asia">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="reg-worker-pay-bank-account">Bank Account #</label>
+                    <input class="form-input" type="text" id="reg-worker-pay-bank-account" placeholder="e.g. 1234567890">
+                  </div>
+                </div>
+              </div>
+
               <button type="submit" class="btn btn-primary btn-block">
                 <span class="spinner"></span>
                 <span class="btn-text">Create Worker Account</span>
@@ -244,16 +270,16 @@
   <footer class="footer">
     <div class="footer-brand">WorkForce Connect</div>
     <div class="footer-tagline">Connecting skilled workers with clients who need them.</div>
-    <a href="admin-login.html" class="footer-admin-link">Admin Access</a>
+    <a href="pages/admin/admin-login.html" class="footer-admin-link">Admin Access</a>
   </footer>
 
   <!-- Dark / Light mode toggle -->
   <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">🌙</button>
 
   <script type="module">
-    import { loadScript } from './firebase-init.js';
-    await loadScript('data.js');
-    await loadScript('auth.js');
+    import { loadScript } from './js/firebase-init.js';
+    await loadScript('js/data.js');
+    await loadScript('js/auth.js');
     // Password show/hide toggles
     document.querySelectorAll('.pwd-toggle').forEach(btn => {
       btn.addEventListener('click', function() {

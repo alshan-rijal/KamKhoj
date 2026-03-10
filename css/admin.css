@@ -403,6 +403,13 @@ p { color: var(--admin-muted); }
 .admin-stats-row {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 28px;
 }
+/* Stat cards layout (used on payments page & dashboard) */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 28px;
+}
 .admin-stat-card {
   background: var(--admin-card-bg); border: 1px solid var(--admin-border);
   border-radius: var(--radius-md); padding: 22px;
@@ -803,6 +810,7 @@ p { color: var(--admin-muted); }
 /* ═══════ RESPONSIVE ═══════ */
 @media (max-width: 1200px) {
   .admin-stats-row { grid-template-columns: repeat(2, 1fr); }
+  .stat-cards { grid-template-columns: repeat(2, 1fr); }
   .admin-charts-row { grid-template-columns: 1fr; }
 }
 @media (max-width: 1024px) {
@@ -818,6 +826,7 @@ p { color: var(--admin-muted); }
 }
 @media (max-width: 768px) {
   .admin-stats-row { grid-template-columns: 1fr; }
+  .stat-cards { grid-template-columns: 1fr 1fr; }
   .admin-table-header { flex-direction: column; align-items: stretch; }
   .table-filters { flex-direction: column; }
   .table-filters .adm-form-input, .table-filters .adm-form-select { min-width: 100%; }
@@ -825,10 +834,265 @@ p { color: var(--admin-muted); }
   .adm-review-worker-info { min-width: 0; }
   .adm-form-row { grid-template-columns: 1fr; }
   .adm-modal { max-width: 100%; border-radius: var(--radius-sm); }
+  /* Section tabs: horizontal scroll on mobile */
+  .admin-content .section-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+  .admin-content .section-tabs::-webkit-scrollbar { display: none; }
+  .admin-content .section-tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    padding: 7px 12px;
+  }
+  /* Tables: horizontal scroll wrapper */
+  .admin-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .admin-table-wrapper .adm-table {
+    min-width: 650px;
+  }
+  /* Payment table → card layout on mobile */
+  .admin-table-wrapper.pay-table-responsive .adm-table { min-width: 0; }
+  .admin-table-wrapper.pay-table-responsive .adm-table thead { display: none; }
+  .admin-table-wrapper.pay-table-responsive .adm-table,
+  .admin-table-wrapper.pay-table-responsive .adm-table tbody {
+    display: block; width: 100%;
+  }
+  .admin-table-wrapper.pay-table-responsive .adm-table tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    padding: 12px;
+    margin-bottom: 8px;
+    border: 1px solid var(--admin-border);
+    border-radius: var(--radius-sm);
+    background: var(--admin-card-bg);
+  }
+  .admin-table-wrapper.pay-table-responsive .adm-table td {
+    padding: 4px 6px;
+    border-bottom: none;
+    font-size: 0.83rem;
+  }
+  .admin-table-wrapper.pay-table-responsive .adm-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--admin-muted);
+    margin-bottom: 2px;
+  }
+  .admin-table-wrapper.pay-table-responsive .adm-table td.pay-td-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    border-top: 1px solid var(--admin-border);
+    margin-top: 4px;
+  }
 }
 @media (max-width: 600px) {
   .admin-main { padding: calc(var(--topbar-height) + 16px) 12px 30px; }
   .topbar-clock { display: none; }
   .quick-actions-row { flex-direction: column; }
   .quick-actions-row .adm-btn { width: 100%; }
+  .stat-cards { grid-template-columns: 1fr; }
+  /* Pay Worker cards: stack price below title */
+  .pay-worker-card { padding: 1rem; }
+  .pay-worker-info-box { padding: 0.6rem; }
+}
+
+/* ═══════════════════════════════════════
+   PAYMENT MANAGEMENT STYLES
+   ═══════════════════════════════════════ */
+
+/* QR Management Grid */
+.qr-management-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+.qr-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+}
+.qr-card h4 {
+  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+.qr-preview-wrapper {
+  width: 180px;
+  height: 180px;
+  margin: 0 auto;
+  border-radius: 10px;
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.2);
+}
+.qr-preview-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.qr-empty {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.25);
+}
+.adm-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.85rem;
+  width: 100%;
+}
+.adm-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.adm-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Admin Badges */
+.adm-badge {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.adm-badge-success {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22C55E;
+}
+.adm-badge-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
+}
+.adm-badge-warning {
+  background: rgba(250, 204, 21, 0.15);
+  color: #FACC15;
+}
+
+/* Pay Worker cards */
+.pay-worker-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.pay-worker-info-box {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.pay-card-muted {
+  color: rgba(255, 255, 255, 0.4);
+}
+[data-theme="light"] .pay-worker-card {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .pay-worker-info-box {
+  background: rgba(0, 0, 0, 0.03);
+}
+[data-theme="light"] .pay-card-muted {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+/* Section tabs in admin */
+.admin-content .section-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 1rem;
+}
+.admin-content .section-tab {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.admin-content .section-tab:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+}
+.admin-content .section-tab.active {
+  color: #0D0D0D;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.admin-content .section-tab .tab-count {
+  background: rgba(var(--accent-rgb), 0.18);
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 99px;
+  margin-left: 6px;
+  display: inline-block;
+}
+.admin-content .section-tab.active .tab-count {
+  background: rgba(0, 0, 0, 0.15);
+  color: #0D0D0D;
+}
+.admin-content .section-tab .tab-count.alert {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+@media (max-width: 768px) {
+  .qr-management-grid { grid-template-columns: 1fr; }
+}
+
+/* Light mode admin payment overrides */
+[data-theme="light"] .qr-card {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .qr-card h4 { color: var(--text-primary); }
+[data-theme="light"] .qr-preview-wrapper {
+  border-color: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.03);
+}
+[data-theme="light"] .qr-empty { color: rgba(0, 0, 0, 0.3); }
+[data-theme="light"] .adm-input {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: var(--text-primary);
+}
+[data-theme="light"] .adm-input::placeholder { color: rgba(0, 0, 0, 0.35); }
+[data-theme="light"] .admin-content .section-tab {
+  color: rgba(0, 0, 0, 0.5);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .admin-content .section-tab:hover {
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.04);
+}
+[data-theme="light"] .admin-content .section-tab.active {
+  color: #0D0D0D;
 }

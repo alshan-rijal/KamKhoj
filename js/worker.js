@@ -8,7 +8,7 @@
   if (!session) return;
 
   let worker = getCurrentUser();
-  if (!worker) { clearSession(); window.location.href = 'index.html'; return; }
+  if (!worker) { clearSession(); window.location.href = '../index.html'; return; }
 
   /* ── DOM Refs ── */
   const navAvatar = document.getElementById('nav-avatar');
@@ -68,7 +68,7 @@
 
   document.getElementById('btn-logout-yes').addEventListener('click', () => {
     clearSession();
-    window.location.href = 'index.html';
+    window.location.href = '../index.html';
   });
 
   document.getElementById('btn-logout-cancel').addEventListener('click', (e) => {
@@ -124,6 +124,12 @@
     const availability = document.getElementById('edit-availability').value === 'true';
     const bio = document.getElementById('edit-bio').value.trim();
 
+    // Payment info
+    const payEsewa = document.getElementById('edit-pay-esewa') ? document.getElementById('edit-pay-esewa').value.trim() : '';
+    const payKhalti = document.getElementById('edit-pay-khalti') ? document.getElementById('edit-pay-khalti').value.trim() : '';
+    const payBankName = document.getElementById('edit-pay-bank-name') ? document.getElementById('edit-pay-bank-name').value.trim() : '';
+    const payBankAccount = document.getElementById('edit-pay-bank-account') ? document.getElementById('edit-pay-bank-account').value.trim() : '';
+
     if (!name || !phone || !city) {
       showToast('Please fill in all required fields', 'error');
       return;
@@ -138,7 +144,15 @@
 
     setTimeout(() => {
       btn.classList.remove('loading');
-      updateUser(worker.id, { name, phone, city, category, experience, availability, bio });
+      updateUser(worker.id, {
+        name, phone, city, category, experience, availability, bio,
+        paymentInfo: {
+          esewa: payEsewa,
+          khalti: payKhalti,
+          bankName: payBankName,
+          bankAccount: payBankAccount
+        }
+      });
       editModal.classList.remove('active');
       showToast('Profile updated!', 'success');
       renderAll();
@@ -176,6 +190,13 @@
     document.getElementById('time-client-estimate').textContent = clientEstimate || 'Not specified';
     document.getElementById('time-proposal').value = '';
     document.getElementById('time-modal').classList.add('active');
+  };
+
+  window.handleProposePrice = function(taskId, clientPrice) {
+    document.getElementById('price-task-id').value = taskId;
+    document.getElementById('price-client-estimate').textContent = clientPrice || 'Not specified';
+    document.getElementById('price-proposal').value = '';
+    document.getElementById('price-modal').classList.add('active');
   };
 
   window.handleStatusChange = function(taskId, newStatus) {
@@ -242,6 +263,32 @@
   document.getElementById('time-proposal').addEventListener('input', () => {
     document.getElementById('time-proposal-error').classList.remove('visible');
     document.getElementById('time-proposal').classList.remove('error');
+  });
+
+  /* ── Price Proposal Modal ── */
+  const priceModal = document.getElementById('price-modal');
+  const priceForm = document.getElementById('price-form');
+  document.getElementById('price-modal-close').addEventListener('click', () => priceModal.classList.remove('active'));
+  priceModal.addEventListener('click', (e) => { if (e.target === priceModal) priceModal.classList.remove('active'); });
+
+  priceForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const proposal = document.getElementById('price-proposal').value.trim();
+    if (!proposal) {
+      document.getElementById('price-proposal-error').classList.add('visible');
+      document.getElementById('price-proposal').classList.add('error');
+      return;
+    }
+    const taskId = document.getElementById('price-task-id').value;
+    updateAssignment(taskId, { workerPriceEstimate: proposal });
+    priceModal.classList.remove('active');
+    showToast('Price proposal sent!', 'success');
+    renderTasks();
+  });
+
+  document.getElementById('price-proposal').addEventListener('input', () => {
+    document.getElementById('price-proposal-error').classList.remove('visible');
+    document.getElementById('price-proposal').classList.remove('error');
   });
 
   /* ══════════════════════════════════════
@@ -411,15 +458,22 @@
             <button class="btn btn-primary btn-sm" onclick="handleAcceptTask('${task.id}')">✅ Accept</button>
             <button class="btn btn-danger btn-sm" onclick="handleRejectTask('${task.id}')">✕ Reject</button>
             <button class="btn btn-ghost btn-sm" onclick="handleProposeTime('${task.id}', '${escapeHtml(task.clientTimeEstimate)}')">⏱ Propose Time</button>
+            <button class="btn btn-ghost btn-sm" onclick="handleProposePrice('${task.id}', '${escapeHtml(task.clientPriceEstimate || '')}')">💰 Propose Price</button>
           </div>
         `;
       } else if (['accepted', 'not-started'].includes(task.status)) {
-        actionsHtml = `
-          <div class="assignment-actions">
-            <button class="btn btn-primary btn-sm" onclick="handleStatusChange('${task.id}', 'ongoing')">▶ Start Work</button>
-            <button class="btn btn-ghost btn-sm" onclick="handleProposeTime('${task.id}', '${escapeHtml(task.clientTimeEstimate)}')">⏱ Change Time</button>
-          </div>
-        `;
+        const paymentVerified = isPaymentVerified(task);
+        actionsHtml = '<div class="assignment-actions">';
+        if (paymentVerified) {
+          actionsHtml += `<button class="btn btn-primary btn-sm" onclick="handleStatusChange('${task.id}', 'ongoing')">▶ Start Work</button>`;
+        } else if (task.paymentStatus === 'submitted') {
+          actionsHtml += `<span class="payment-status-badge payment-pending">⏳ Awaiting Payment Verification</span>`;
+        } else {
+          actionsHtml += `<span class="payment-status-badge payment-pending">💳 Waiting for Client Payment</span>`;
+        }
+        actionsHtml += `<button class="btn btn-ghost btn-sm" onclick="handleProposeTime('${task.id}', '${escapeHtml(task.clientTimeEstimate)}')">⏱ Change Time</button>`;
+        actionsHtml += `<button class="btn btn-ghost btn-sm" onclick="handleProposePrice('${task.id}', '${escapeHtml(task.clientPriceEstimate || '')}')">💰 Change Price</button>`;
+        actionsHtml += '</div>';
       } else if (task.status === 'ongoing') {
         actionsHtml = `
           <div class="assignment-actions">
@@ -433,12 +487,32 @@
       if (task.clientTimeEstimate || task.workerTimeEstimate) {
         timeHtml = '<div class="time-estimates">';
         if (task.clientTimeEstimate) {
-          timeHtml += `<div class="time-estimate-item"><div class="time-estimate-label">Client Estimate</div><div class="time-estimate-value">${escapeHtml(task.clientTimeEstimate)}</div></div>`;
+          timeHtml += `<div class="time-estimate-item"><div class="time-estimate-label">Client Time</div><div class="time-estimate-value">${escapeHtml(task.clientTimeEstimate)}</div></div>`;
         }
         if (task.workerTimeEstimate) {
-          timeHtml += `<div class="time-estimate-item"><div class="time-estimate-label">Your Estimate</div><div class="time-estimate-value">${escapeHtml(task.workerTimeEstimate)}</div></div>`;
+          timeHtml += `<div class="time-estimate-item"><div class="time-estimate-label">Your Time</div><div class="time-estimate-value">${escapeHtml(task.workerTimeEstimate)}</div></div>`;
         }
         timeHtml += '</div>';
+      }
+
+      let priceHtml = '';
+      if (task.clientPriceEstimate || task.workerPriceEstimate) {
+        priceHtml = '<div class="time-estimates">';
+        if (task.clientPriceEstimate) {
+          priceHtml += `<div class="time-estimate-item"><div class="time-estimate-label">Client Price</div><div class="time-estimate-value">${escapeHtml(task.clientPriceEstimate)}</div></div>`;
+        }
+        if (task.workerPriceEstimate) {
+          priceHtml += `<div class="time-estimate-item"><div class="time-estimate-label">Your Price</div><div class="time-estimate-value">${escapeHtml(task.workerPriceEstimate)}</div></div>`;
+        }
+        priceHtml += '</div>';
+      }
+
+      // Payment status display
+      let paymentStatusHtml = '';
+      if (task.paymentStatus) {
+        const payLabels = { submitted: '⏳ Payment Under Review', verified: '✅ Payment Verified', rejected: '❌ Payment Rejected' };
+        const payClass = task.paymentStatus === 'verified' ? 'payment-verified' : task.paymentStatus === 'rejected' ? 'payment-rejected' : 'payment-pending';
+        paymentStatusHtml = `<div class="payment-status-badge ${payClass}">${payLabels[task.paymentStatus] || ''}</div>`;
       }
 
       let rejectionHtml = '';
@@ -462,6 +536,8 @@
           </div>
           ${task.description ? `<div class="assignment-card-desc">${escapeHtml(task.description)}</div>` : ''}
           ${timeHtml}
+          ${priceHtml}
+          ${paymentStatusHtml}
           ${rejectionHtml}
           <div class="assignment-meta">
             <span class="assignment-meta-item">📅 Assigned: ${formatDate(task.createdAt)}</span>
@@ -496,6 +572,12 @@
     document.getElementById('edit-availability').value = String(worker.availability);
     document.getElementById('edit-bio').value = worker.bio || '';
     editBioCounter.textContent = `${(worker.bio || '').length}/300`;
+    // Payment info
+    const pi = worker.paymentInfo || {};
+    if (document.getElementById('edit-pay-esewa')) document.getElementById('edit-pay-esewa').value = pi.esewa || '';
+    if (document.getElementById('edit-pay-khalti')) document.getElementById('edit-pay-khalti').value = pi.khalti || '';
+    if (document.getElementById('edit-pay-bank-name')) document.getElementById('edit-pay-bank-name').value = pi.bankName || '';
+    if (document.getElementById('edit-pay-bank-account')) document.getElementById('edit-pay-bank-account').value = pi.bankAccount || '';
     editModal.classList.add('active');
   }
 

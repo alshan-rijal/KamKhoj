@@ -8,13 +8,13 @@
   const workerId = params.get('id');
 
   if (!workerId) {
-    window.location.href = 'index.html';
+    window.location.href = '../index.html';
     return;
   }
 
   let worker = getUserById(workerId);
   if (!worker || worker.type !== 'worker') {
-    window.location.href = 'index.html';
+    window.location.href = '../index.html';
     return;
   }
 
@@ -136,6 +136,11 @@
             <input class="form-input" type="text" id="assign-time" placeholder="e.g. 3 days" maxlength="50">
             <div class="form-error" id="assign-time-error">Time estimate is required</div>
           </div>
+          <div class="form-group">
+            <label class="form-label" for="assign-price">Price Estimate (e.g. "Rs. 5000")</label>
+            <input class="form-input" type="text" id="assign-price" placeholder="e.g. Rs. 5000" maxlength="50">
+            <div class="form-error" id="assign-price-error">Price estimate is required</div>
+          </div>
           <button type="submit" class="btn btn-primary">
             <span class="spinner"></span>
             <span class="btn-text">Assign Work</span>
@@ -162,6 +167,7 @@
       const title = document.getElementById('assign-title').value.trim();
       const desc = descInput.value.trim();
       const time = document.getElementById('assign-time').value.trim();
+      const price = document.getElementById('assign-price').value.trim();
       let valid = true;
 
       if (!title) {
@@ -180,6 +186,14 @@
         document.getElementById('assign-time-error').classList.remove('visible');
         document.getElementById('assign-time').classList.remove('error');
       }
+      if (!price) {
+        document.getElementById('assign-price-error').classList.add('visible');
+        document.getElementById('assign-price').classList.add('error');
+        valid = false;
+      } else {
+        document.getElementById('assign-price-error').classList.remove('visible');
+        document.getElementById('assign-price').classList.remove('error');
+      }
 
       if (!valid) return;
 
@@ -193,7 +207,8 @@
           workerId: workerId,
           title: title,
           description: desc,
-          clientTimeEstimate: time
+          clientTimeEstimate: time,
+          clientPriceEstimate: price
         });
         showToast('Work assigned successfully! Waiting for worker response.', 'success');
         form.reset();
@@ -202,7 +217,7 @@
     });
 
     // Clear errors on input
-    ['assign-title', 'assign-time'].forEach(id => {
+    ['assign-title', 'assign-time', 'assign-price'].forEach(id => {
       document.getElementById(id).addEventListener('input', () => {
         document.getElementById(id).classList.remove('error');
         document.getElementById(id + '-error').classList.remove('visible');
@@ -433,7 +448,7 @@
   });
   document.getElementById('btn-logout-yes').addEventListener('click', () => {
     clearSession();
-    window.location.href = 'index.html';
+    window.location.href = '../index.html';
   });
   document.getElementById('btn-logout-cancel').addEventListener('click', (e) => {
     e.stopPropagation();

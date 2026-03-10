@@ -6,8 +6,8 @@
   <title>Admin Login — WorkForce Connect</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="../../css/admin.css">
   <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
   <style>
     /* ---- Login-specific overrides ---- */
@@ -207,11 +207,12 @@
             <span class="spinner"></span>
           </button>
         </form>
-        <a href="index.html" class="back-link">← Back to main site</a>
+        <a href="../../index.html" class="back-link">← Back to main site</a>
       </div>
     </div>
   </div>
 
+  <script src="../../js/admin.js"></script>
   <script>
     (function() {
       // If already logged in, redirect
@@ -245,13 +246,13 @@
         const password = passInput.value;
 
         setTimeout(() => {
-          if (username === 'admin' && password === 'admin123') {
+          if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
             // Success
             card.classList.add('exit');
             localStorage.setItem('wfc_admin_session', JSON.stringify({
               loggedIn: true,
-              username: 'admin',
-              name: 'System Administrator',
+              username: ADMIN_CREDENTIALS.username,
+              name: ADMIN_CREDENTIALS.name,
               loginTime: new Date().toISOString()
             }));
             setTimeout(() => {
