@@ -1,5 +1,5 @@
 /* ========================================
-   WorkForce Connect — Worker Dashboard (worker.js)
+   काम Khoj.com — Worker Dashboard (worker.js)
    ======================================== */
 
 (function () {

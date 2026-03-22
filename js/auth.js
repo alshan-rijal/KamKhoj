@@ -1,5 +1,5 @@
 /* ========================================
-   WorkForce Connect — Authentication (auth.js)
+   काम Khoj.com — Authentication (auth.js)
    ======================================== */
 
 (function () {

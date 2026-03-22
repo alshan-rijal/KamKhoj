@@ -1,5 +1,5 @@
 /* ========================================
-   WorkForce Connect — Firebase Initialization
+   काम Khoj.com — Firebase Initialization
    This module initializes Firebase and loads
    data from Firestore into memory cache.
    ======================================== */
@@ -90,6 +90,52 @@ try {
   if (localPay) paymentSettings = JSON.parse(localPay);
 }
 window._wfcPaymentSettingsCache = paymentSettings;
+
+// ── Load site settings from Firestore ──
+let siteSettings = {
+  brand: { nepali: 'काम', latin: 'Khoj.com' },
+  about: {
+    title: 'About काम Khoj.com',
+    description: 'काम Khoj.com helps clients quickly discover trusted local workers and helps skilled workers find reliable job opportunities in their area.'
+  },
+  contact: {
+    heading: 'Contact काम Khoj.com',
+    email: 'hello@khoj.com',
+    phone: '+977-9800000000',
+    address: 'Putalisadak, Kathmandu, Nepal',
+    supportHours: 'Sun-Fri, 9:00 AM - 6:00 PM'
+  },
+  founders: [
+    {
+      role: 'Founder',
+      name: 'Aarav Sharma',
+      title: 'Founder & Product Vision Lead',
+      bio: 'Aarav leads platform strategy and focuses on building trustworthy hiring experiences for workers and clients.',
+      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80',
+      linkedin: 'https://www.linkedin.com/'
+    },
+    {
+      role: 'Co-Founder',
+      name: 'Saanvi Koirala',
+      title: 'Co-Founder & Operations Lead',
+      bio: 'Saanvi designs service operations and quality systems that keep the platform reliable across every city.',
+      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80',
+      linkedin: 'https://www.linkedin.com/'
+    }
+  ]
+};
+try {
+  const siteDoc = await getDoc(doc(db, 'config', 'site_settings'));
+  if (siteDoc.exists()) {
+    siteSettings = { ...siteSettings, ...siteDoc.data() };
+    localStorage.setItem('wfc_site_settings', JSON.stringify(siteSettings));
+  }
+} catch (e) {
+  console.warn('Site settings read failed, using localStorage:', e);
+  const localSite = localStorage.getItem('wfc_site_settings');
+  if (localSite) siteSettings = JSON.parse(localSite);
+}
+window._wfcSiteSettingsCache = siteSettings;
 
 // ── Load admin activity — Firestore is source of truth ──
 let activities = [];

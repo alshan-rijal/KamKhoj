@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About | काम Khoj.com</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="../index.html" class="navbar-brand">
+        <span class="brand-icon">⚡</span>
+        <span class="brand-text">
+          <span class="brand-nepali" data-brand-nepali>काम</span>
+          <span class="brand-latin" data-brand-latin>Khoj.com</span>
+        </span>
+      </a>
+      <div class="navbar-right">
+        <div class="nav-links">
+          <a class="nav-link" href="../index.html">Home</a>
+          <a class="nav-link" href="contact.html">Contact</a>
+          <a class="nav-link active" href="about.html">About Us</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="static-page">
+    <div class="container">
+      <section class="static-hero">
+        <h1 id="about-title">About काम Khoj.com</h1>
+        <p id="about-description">काम Khoj.com helps clients quickly discover trusted local workers and helps skilled workers find reliable job opportunities in their area.</p>
+      </section>
+
+      <section>
+        <h3 style="margin-bottom:var(--sp-md);">Meet The Team</h3>
+        <div class="founder-slider">
+          <div class="founder-slides" id="founder-slides"></div>
+        </div>
+        <div class="slider-controls">
+          <button class="slider-btn" id="slider-prev" aria-label="Previous slide">&lt;</button>
+          <div id="slider-dots" style="display:flex;gap:8px;"></div>
+          <button class="slider-btn" id="slider-next" aria-label="Next slide">&gt;</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-brand">
+      <span class="brand-nepali" data-brand-nepali>काम</span>
+      <span class="brand-latin" data-brand-latin>Khoj.com</span>
+    </div>
+    <div class="footer-tagline">Connecting skilled workers with clients who need them.</div>
+  </footer>
+
+  <script type="module">
+    import { loadScript } from '../js/firebase-init.js';
+    await loadScript('../js/data.js');
+    await loadScript('../js/site-pages.js');
+  </script>
+</body>
+</html>

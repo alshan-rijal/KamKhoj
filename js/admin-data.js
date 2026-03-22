@@ -1,5 +1,5 @@
 /* ========================================
-   WorkForce Connect — Admin Data Layer
+   काम Khoj.com — Admin Data Layer
    Reads from in-memory cache (loaded by firebase-init.js).
    Writes sync back to Firestore in the background.
    Admin sessions remain in localStorage.
@@ -249,6 +249,56 @@ function adminSavePaymentSettings(settings) {
     .catch(e => console.error('Admin payment settings sync error:', e));
 }
 
+/* ── Site Settings (brand/about/contact/founders) ── */
+function adminGetSiteSettings() {
+  if (typeof getSiteSettings === 'function') return getSiteSettings();
+  return window._wfcSiteSettingsCache || {
+    brand: { nepali: 'काम', latin: 'Khoj.com' },
+    about: {
+      title: 'About काम Khoj.com',
+      description: 'काम Khoj.com helps clients quickly discover trusted local workers and helps skilled workers find reliable job opportunities in their area.'
+    },
+    contact: {
+      heading: 'Contact काम Khoj.com',
+      email: 'hello@khoj.com',
+      phone: '+977-9800000000',
+      address: 'Putalisadak, Kathmandu, Nepal',
+      supportHours: 'Sun-Fri, 9:00 AM - 6:00 PM'
+    },
+    founders: [
+      {
+        role: 'Founder',
+        name: 'Aarav Sharma',
+        title: 'Founder & Product Vision Lead',
+        bio: 'Aarav leads platform strategy and focuses on building trustworthy hiring experiences for workers and clients.',
+        image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80',
+        linkedin: 'https://www.linkedin.com/'
+      },
+      {
+        role: 'Co-Founder',
+        name: 'Saanvi Koirala',
+        title: 'Co-Founder & Operations Lead',
+        bio: 'Saanvi designs service operations and quality systems that keep the platform reliable across every city.',
+        image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80',
+        linkedin: 'https://www.linkedin.com/'
+      }
+    ]
+  };
+}
+
+function adminSaveSiteSettings(settings) {
+  if (typeof saveSiteSettings === 'function') {
+    saveSiteSettings(settings);
+    return;
+  }
+  window._wfcSiteSettingsCache = { ...settings };
+  localStorage.setItem('wfc_site_settings', JSON.stringify(settings));
+  const { doc, setDoc } = window._fs;
+  setDoc(doc(window._db, 'config', 'site_settings'), settings)
+    .then(() => console.log('Admin site settings sync OK'))
+    .catch(e => console.error('Admin site settings sync error:', e));
+}
+
 /* ── Get workers with payment info ── */
 function adminGetWorkersWithPaymentInfo() {
   return adminGetWorkers().filter(w => w.paymentInfo &&
@@ -354,7 +404,7 @@ function adminExportData() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `workforce-connect-export-${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `kaam-khoj-export-${new Date().toISOString().slice(0,10)}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

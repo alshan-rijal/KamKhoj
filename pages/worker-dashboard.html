@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WorkForce Connect — Worker Dashboard</title>
+  <title>काम Khoj.com — Worker Dashboard</title>
   <link rel="stylesheet" href="../css/style.css">
   <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 </head>
@@ -14,9 +14,17 @@
     <div class="navbar-inner">
       <a href="worker-dashboard.html" class="navbar-brand">
         <span class="brand-icon">⚡</span>
-        WorkForce Connect
+        <span class="brand-text">
+          <span class="brand-nepali" data-brand-nepali>काम</span>
+          <span class="brand-latin" data-brand-latin>Khoj.com</span>
+        </span>
       </a>
       <div class="navbar-right">
+        <div class="nav-links">
+          <a class="nav-link" href="../index.html">Home</a>
+          <a class="nav-link" href="contact.html">Contact</a>
+          <a class="nav-link" href="about.html">About Us</a>
+        </div>
         <!-- Availability Toggle -->
         <div class="availability-toggle" id="avail-toggle">
           <div class="toggle-track" id="avail-track">
@@ -280,6 +288,7 @@
   <script type="module">
     import { loadScript } from '../js/firebase-init.js';
     await loadScript('../js/data.js');
+    await loadScript('../js/site-pages.js');
     await loadScript('../js/worker.js');
   </script>
   <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">🌙</button>

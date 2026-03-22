@@ -1,5 +1,5 @@
 /* ========================================
-   WorkForce Connect — Worker Profile Page (profile.js)
+   काम Khoj.com — Worker Profile Page (profile.js)
    ======================================== */
 
 (function () {

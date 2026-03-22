@@ -1,5 +1,5 @@
 /* ========================================
-   WorkForce Connect — Data Layer (data.js)
+   काम Khoj.com — Data Layer (data.js)
    Reads from in-memory cache (loaded by firebase-init.js).
    Writes sync back to Firestore in the background.
    Sessions remain in localStorage (client-side only).
@@ -7,6 +7,42 @@
 
 const DATA_KEYS = {
   session: 'wfc_session'
+};
+
+const DEFAULT_SITE_SETTINGS = {
+  brand: {
+    nepali: 'काम',
+    latin: 'Khoj.com'
+  },
+  about: {
+    title: 'About काम Khoj.com',
+    description: 'काम Khoj.com helps clients quickly discover trusted local workers and helps skilled workers find reliable job opportunities in their area.'
+  },
+  contact: {
+    heading: 'Contact काम Khoj.com',
+    email: 'hello@khoj.com',
+    phone: '+977-9800000000',
+    address: 'Putalisadak, Kathmandu, Nepal',
+    supportHours: 'Sun-Fri, 9:00 AM - 6:00 PM'
+  },
+  founders: [
+    {
+      role: 'Founder',
+      name: 'Aarav Sharma',
+      title: 'Founder & Product Vision Lead',
+      bio: 'Aarav leads platform strategy and focuses on building trustworthy hiring experiences for workers and clients.',
+      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80',
+      linkedin: 'https://www.linkedin.com/'
+    },
+    {
+      role: 'Co-Founder',
+      name: 'Saanvi Koirala',
+      title: 'Co-Founder & Operations Lead',
+      bio: 'Saanvi designs service operations and quality systems that keep the platform reliable across every city.',
+      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80',
+      linkedin: 'https://www.linkedin.com/'
+    }
+  ]
 };
 
 /* ── Category Color Map ── */
@@ -404,6 +440,61 @@ function savePaymentSettings(settings) {
   window._wfcPaymentSettingsCache = { ...settings };
   localStorage.setItem('wfc_payment_settings', JSON.stringify(settings));
   _syncPaymentSettingsToFirestore(settings);
+}
+
+/* ═══════════════════════════════════════
+   SITE SETTINGS (Brand/About/Contact)
+   ═══════════════════════════════════════ */
+
+function normalizeSiteSettings(settings) {
+  const input = settings || {};
+  const foundersInput = Array.isArray(input.founders) ? input.founders : [];
+  return {
+    brand: {
+      nepali: input.brand?.nepali || input.brand?.hindi || DEFAULT_SITE_SETTINGS.brand.nepali,
+      latin: input.brand?.latin || DEFAULT_SITE_SETTINGS.brand.latin
+    },
+    about: {
+      title: input.about?.title || DEFAULT_SITE_SETTINGS.about.title,
+      description: input.about?.description || DEFAULT_SITE_SETTINGS.about.description
+    },
+    contact: {
+      heading: input.contact?.heading || DEFAULT_SITE_SETTINGS.contact.heading,
+      email: input.contact?.email || DEFAULT_SITE_SETTINGS.contact.email,
+      phone: input.contact?.phone || DEFAULT_SITE_SETTINGS.contact.phone,
+      address: input.contact?.address || DEFAULT_SITE_SETTINGS.contact.address,
+      supportHours: input.contact?.supportHours || DEFAULT_SITE_SETTINGS.contact.supportHours
+    },
+    founders: [0, 1].map((idx) => ({
+      role: foundersInput[idx]?.role || DEFAULT_SITE_SETTINGS.founders[idx].role,
+      name: foundersInput[idx]?.name || DEFAULT_SITE_SETTINGS.founders[idx].name,
+      title: foundersInput[idx]?.title || DEFAULT_SITE_SETTINGS.founders[idx].title,
+      bio: foundersInput[idx]?.bio || DEFAULT_SITE_SETTINGS.founders[idx].bio,
+      image: foundersInput[idx]?.image || DEFAULT_SITE_SETTINGS.founders[idx].image,
+      linkedin: foundersInput[idx]?.linkedin || DEFAULT_SITE_SETTINGS.founders[idx].linkedin
+    }))
+  };
+}
+
+function getSiteSettings() {
+  return normalizeSiteSettings(window._wfcSiteSettingsCache || DEFAULT_SITE_SETTINGS);
+}
+
+function saveSiteSettings(settings) {
+  const normalized = normalizeSiteSettings(settings);
+  window._wfcSiteSettingsCache = { ...normalized };
+  localStorage.setItem('wfc_site_settings', JSON.stringify(normalized));
+  _syncSiteSettingsToFirestore(normalized);
+}
+
+async function _syncSiteSettingsToFirestore(settings) {
+  const { doc, setDoc } = window._fs;
+  try {
+    await setDoc(doc(window._db, 'config', 'site_settings'), settings);
+    console.log('Site settings Firestore sync OK');
+  } catch (e) {
+    console.error('Site settings sync error:', e);
+  }
 }
 
 async function _syncPaymentSettingsToFirestore(settings) {

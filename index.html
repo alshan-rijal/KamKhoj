@@ -3,11 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WorkForce Connect — Find Skilled Workers</title>
+  <title>काम Khoj.com — Find Skilled Workers</title>
   <link rel="stylesheet" href="css/style.css">
   <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 </head>
 <body>
+
+  <!-- ═══════ NAVBAR ═══════ -->
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="index.html" class="navbar-brand">
+        <span class="brand-icon">⚡</span>
+        <span class="brand-text">
+          <span class="brand-nepali" data-brand-nepali>काम</span>
+          <span class="brand-latin" data-brand-latin>Khoj.com</span>
+        </span>
+      </a>
+      <div class="navbar-right">
+        <div class="nav-links">
+          <a class="nav-link active" href="index.html">Home</a>
+          <a class="nav-link" href="pages/contact.html">Contact</a>
+          <a class="nav-link" href="pages/about.html">About Us</a>
+        </div>
+      </div>
+    </div>
+  </nav>
 
   <!-- ═══════ HERO SECTION ═══════ -->
   <section class="hero" id="hero-section">
@@ -15,7 +35,8 @@
       <div style="margin-bottom:var(--sp-lg);">
         <span style="display:inline-flex;align-items:center;gap:8px;font-family:var(--font-display);font-size:1.3rem;font-weight:700;color:var(--accent);">
           <span style="width:42px;height:42px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#0D0D0D;font-size:1.2rem;">⚡</span>
-          WorkForce Connect
+          <span class="brand-nepali" data-brand-nepali>काम</span>
+          <span class="brand-latin" data-brand-latin>Khoj.com</span>
         </span>
       </div>
       <h1>Find Skilled Workers<br><span class="text-accent">You Can Trust</span></h1>
@@ -36,7 +57,10 @@
         <div class="auth-brand-inner anim-fade-in-up">
           <div class="auth-brand-logo">
             <span class="auth-brand-icon-wrap">⚡</span>
-            <span>WorkForce Connect</span>
+            <span class="brand-text">
+              <span class="brand-nepali" data-brand-nepali>काम</span>
+              <span class="brand-latin" data-brand-latin>Khoj.com</span>
+            </span>
           </div>
           <h2 class="auth-brand-heading" id="auth-title">Welcome Back</h2>
           <p class="auth-brand-sub">Connect with trusted professionals or find great work near you.</p>
@@ -268,7 +292,10 @@
 
   <!-- ═══════ FOOTER ═══════ -->
   <footer class="footer">
-    <div class="footer-brand">WorkForce Connect</div>
+    <div class="footer-brand">
+      <span class="brand-nepali" data-brand-nepali>काम</span>
+      <span class="brand-latin" data-brand-latin>Khoj.com</span>
+    </div>
     <div class="footer-tagline">Connecting skilled workers with clients who need them.</div>
     <a href="pages/admin/admin-login.html" class="footer-admin-link">Admin Access</a>
   </footer>
@@ -279,6 +306,7 @@
   <script type="module">
     import { loadScript } from './js/firebase-init.js';
     await loadScript('js/data.js');
+    await loadScript('js/site-pages.js');
     await loadScript('js/auth.js');
     // Password show/hide toggles
     document.querySelectorAll('.pwd-toggle').forEach(btn => {

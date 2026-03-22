@@ -1,11 +1,11 @@
 /* ========================================
-   WorkForce Connect — Admin Core Logic (admin.js)
+   काम Khoj.com — Admin Core Logic (admin.js)
    Shared utilities for all admin pages.
    ======================================== */
 
 const ADMIN_CREDENTIALS = {
   username: 'admin',
-  password: 'admin',
+  password: 'vac11g',
   name: 'System Administrator',
   avatar: null
 };
@@ -229,7 +229,11 @@ function adminSidebarHTML(activePage) {
       <div class="sidebar-top">
         <div class="sidebar-label">Admin Panel</div>
         <a href="admin-dashboard.html" class="sidebar-brand">
-          <span class="sidebar-brand-icon">⚡</span> WorkForce Connect
+          <span class="sidebar-brand-icon">⚡</span>
+          <span class="brand-text">
+            <span class="brand-nepali">काम</span>
+            <span class="brand-latin">Khoj.com</span>
+          </span>
         </a>
       </div>
       <div class="sidebar-divider"></div>

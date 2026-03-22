@@ -1,5 +1,5 @@
 /* ========================================
-   WorkForce Connect — Client Dashboard (client.js)
+   काम Khoj.com — Client Dashboard (client.js)
    ======================================== */
 
 (function () {
