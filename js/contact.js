@@ -64,6 +64,7 @@
     }
 
     helperEl.textContent = `You are logged in as ${user.name} (${user.type}). Your ticket stays open until admin replies.`;
+    startAutoRefresh();
 
     formEl.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -81,6 +82,39 @@
       paintThread();
       showToast('Support ticket submitted. Admin will reply here.', 'success');
     });
+
+    function startAutoRefresh() {
+      let lastSignature = getThreadSignature();
+
+      const refreshTick = async (forcePaint) => {
+        await syncContactQueriesFromFirestore();
+        const currentSignature = getThreadSignature();
+        if (forcePaint || currentSignature !== lastSignature) {
+          lastSignature = currentSignature;
+          paintThread();
+        }
+      };
+
+      const intervalId = setInterval(() => {
+        refreshTick(false);
+      }, 2500);
+
+      window.addEventListener('focus', () => refreshTick(true));
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refreshTick(true);
+      });
+      window.addEventListener('beforeunload', () => clearInterval(intervalId), { once: true });
+    }
+
+    function getThreadSignature() {
+      const items = getContactQueriesForUser(user.id);
+      return JSON.stringify(items.map((item) => ({
+        id: item.id,
+        status: item.status,
+        updated: item.lastUpdatedAt || item.createdAt,
+        replies: Array.isArray(item.replies) ? item.replies.length : 0
+      })));
+    }
 
     function paintThread() {
       const items = user ? getContactQueriesForUser(user.id) : [];
@@ -124,6 +158,21 @@
           `;
         })
         .join('');
+    }
+  }
+
+  async function syncContactQueriesFromFirestore() {
+    if (!window._db || !window._fs || !window._fs.getDoc || !window._fs.doc) return;
+
+    try {
+      const snapshot = await window._fs.getDoc(window._fs.doc(window._db, 'config', 'contact_queries'));
+      if (!snapshot.exists()) return;
+
+      const latest = snapshot.data().queries || [];
+      window._wfcContactQueriesCache = latest;
+      localStorage.setItem('wfc_contact_queries', JSON.stringify(latest));
+    } catch (_e) {
+      // Keep silent; chat still works with local cache when network is unstable.
     }
   }
 
