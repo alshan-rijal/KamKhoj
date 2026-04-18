@@ -66,6 +66,8 @@
       let activeTicketId = null;
       let activeFilter = 'all';
       let refreshTimer = null;
+      const replyDrafts = {};
+      let lastDetailSignature = '';
 
       function getFilteredQueries() {
         const text = searchEl.value.trim().toLowerCase();
@@ -124,6 +126,7 @@
         listEl.querySelectorAll('[data-ticket-id]').forEach((btn) => {
           btn.addEventListener('click', () => {
             activeTicketId = btn.getAttribute('data-ticket-id');
+            lastDetailSignature = '';
             refresh();
           });
         });
@@ -131,9 +134,31 @@
 
       function renderDetail(query) {
         if (!query) {
+          lastDetailSignature = '';
           detailEl.innerHTML = '<div class="messages-empty">Select a ticket to see details and reply.</div>';
           return;
         }
+
+        const textElBefore = document.getElementById('reply-text');
+        const hadFocus = document.activeElement === textElBefore;
+        const caretStart = textElBefore ? textElBefore.selectionStart : null;
+        const caretEnd = textElBefore ? textElBefore.selectionEnd : null;
+        if (textElBefore) {
+          replyDrafts[query.id] = textElBefore.value;
+        }
+
+        const draftText = replyDrafts[query.id] || '';
+        const detailSignature = buildDetailSignature(query, draftText);
+        if (detailSignature === lastDetailSignature) {
+          if (textElBefore && hadFocus) {
+            textElBefore.focus();
+            const posStart = Number.isInteger(caretStart) ? Math.min(caretStart, textElBefore.value.length) : textElBefore.value.length;
+            const posEnd = Number.isInteger(caretEnd) ? Math.min(caretEnd, textElBefore.value.length) : textElBefore.value.length;
+            textElBefore.setSelectionRange(posStart, posEnd);
+          }
+          return;
+        }
+        lastDetailSignature = detailSignature;
 
         if (hasUnreadForAdmin(query)) {
           adminMarkContactQuerySeen(query.id);
@@ -157,7 +182,7 @@
 
           <form id="reply-form" class="ticket-reply-form">
             <label for="reply-text" style="display:block;margin-bottom:8px;color:var(--admin-muted);">Reply</label>
-            <textarea id="reply-text" rows="3" class="adm-form-input" style="width:100%;resize:vertical;" placeholder="Type your response..."></textarea>
+            <textarea id="reply-text" rows="3" class="adm-form-input" style="width:100%;resize:vertical;" placeholder="Type your response...">${escHtml(draftText)}</textarea>
             <div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px;">
               <button type="submit" class="adm-btn adm-btn-primary">Send Reply</button>
             </div>
@@ -200,6 +225,7 @@
             return;
           }
           activeTicketId = null;
+          lastDetailSignature = '';
           adminShowToast('Ticket deleted from admin and user side.', 'success');
           refresh();
         });
@@ -218,9 +244,23 @@
             return;
           }
           textEl.value = '';
+          replyDrafts[query.id] = '';
           adminShowToast('Reply sent and stored in Firebase', 'success');
           refresh();
         });
+
+        const replyInput = document.getElementById('reply-text');
+        replyInput.addEventListener('input', () => {
+          replyDrafts[query.id] = replyInput.value;
+          lastDetailSignature = buildDetailSignature(query, replyInput.value);
+        });
+
+        if (hadFocus) {
+          replyInput.focus();
+          const posStart = Number.isInteger(caretStart) ? Math.min(caretStart, replyInput.value.length) : replyInput.value.length;
+          const posEnd = Number.isInteger(caretEnd) ? Math.min(caretEnd, replyInput.value.length) : replyInput.value.length;
+          replyInput.setSelectionRange(posStart, posEnd);
+        }
       }
 
       function refresh() {
@@ -249,6 +289,20 @@
 
       function normalizeStatus(status) {
         return status === 'replied' || status === 'closed' ? 'replied' : 'not_replied';
+      }
+
+      function buildDetailSignature(query, draftText) {
+        const replies = Array.isArray(query.replies) ? query.replies : [];
+        return JSON.stringify({
+          id: query.id,
+          status: normalizeStatus(query.status),
+          adminSeen: query.adminLastSeenAt || '',
+          userSeen: query.userLastSeenAt || '',
+          updated: query.lastUpdatedAt || query.createdAt || '',
+          msg: query.message || '',
+          replies: replies.map((r) => [r.senderType || '', r.senderName || '', r.message || '', r.createdAt || '']),
+          draft: draftText || ''
+        });
       }
 
       async function syncContactQueriesFromFirestore() {
