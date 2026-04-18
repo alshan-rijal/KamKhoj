@@ -7,7 +7,53 @@
   <link rel="stylesheet" href="css/style.css">
   <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 </head>
-<body>
+<body class="intro-active">
+
+  <div class="landing-intro" id="landing-intro" aria-hidden="true">
+    <div class="landing-intro-inner">
+      <div class="landing-intro-icon">⚡</div>
+      <div class="landing-intro-name">
+        <span class="intro-nepali" data-brand-nepali>काम</span>
+        <span class="intro-latin" data-brand-latin>Khoj.com</span>
+      </div>
+      <p>Connecting workers and clients with trust.</p>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var INTRO_KEY = 'wfc_intro_seen_session_v1';
+      var splash = document.getElementById('landing-intro');
+      if (!splash) {
+        document.body.classList.remove('intro-active');
+        return;
+      }
+
+      var seenIntro = false;
+      try {
+        seenIntro = sessionStorage.getItem(INTRO_KEY) === '1';
+      } catch (e) {
+        seenIntro = false;
+      }
+
+      if (seenIntro) {
+        document.body.classList.remove('intro-active');
+        splash.remove();
+        return;
+      }
+
+      setTimeout(function() {
+        splash.classList.add('hidden');
+        document.body.classList.remove('intro-active');
+        try {
+          sessionStorage.setItem(INTRO_KEY, '1');
+        } catch (e) {}
+        setTimeout(function() {
+          if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
+        }, 520);
+      }, 1000);
+    })();
+  </script>
 
   <!-- ═══════ NAVBAR ═══════ -->
   <nav class="navbar">
@@ -33,8 +79,7 @@
   <section class="hero" id="hero-section">
     <div class="hero-content anim-fade-in-up">
       <div style="margin-bottom:var(--sp-lg);">
-        <span style="display:inline-flex;align-items:center;gap:8px;font-family:var(--font-display);font-size:1.3rem;font-weight:700;color:var(--accent);">
-          <span style="width:42px;height:42px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#0D0D0D;font-size:1.2rem;">⚡</span>
+        <span class="brand-text brand-text-hero" style="display:inline-block;">
           <span class="brand-nepali" data-brand-nepali>काम</span>
           <span class="brand-latin" data-brand-latin>Khoj.com</span>
         </span>
@@ -44,6 +89,54 @@
       <div class="hero-buttons">
         <button class="btn btn-primary btn-lg" id="btn-looking-for-work">🔨 I'm Looking for Work</button>
         <button class="btn btn-secondary btn-lg" id="btn-need-to-hire">🔍 I Need to Hire</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="landing-band" id="landing-band">
+    <div class="container">
+      <div class="landing-band-grid">
+        <div class="landing-band-item"><strong data-count-to="2500">0</strong><span>Verified Worker Profiles</span></div>
+        <div class="landing-band-item"><strong data-count-to="1400">0</strong><span>Successful Hirings</span></div>
+        <div class="landing-band-item"><strong data-count-to="72">0</strong><span>Districts Reached</span></div>
+        <div class="landing-band-item"><strong data-count-to="98">0</strong><span>Support Satisfaction (%)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="landing-features">
+    <div class="container">
+      <div class="landing-section-head">
+        <h2>Built For Real Local Workflows</h2>
+        <p>From first search to payment verification, the platform is tailored for practical, day-to-day hiring in local communities.</p>
+      </div>
+      <div class="landing-feature-grid">
+        <article class="landing-feature-card">
+          <h3>Skill-first discovery</h3>
+          <p>Browse workers by category, city, experience level, and live feedback so clients shortlist faster.</p>
+        </article>
+        <article class="landing-feature-card">
+          <h3>Transparent assignment flow</h3>
+          <p>Clients and workers agree on time and price in-app before work starts, reducing confusion later.</p>
+        </article>
+        <article class="landing-feature-card">
+          <h3>Payment proof and trust</h3>
+          <p>Structured payment and status updates make every assignment visible to both sides and safer to manage.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="landing-journey">
+    <div class="container">
+      <div class="landing-section-head">
+        <h2>How It Works</h2>
+      </div>
+      <div class="landing-steps">
+        <article class="landing-step"><span>1</span><h4>Create Account</h4><p>Register as worker or client in minutes.</p></article>
+        <article class="landing-step"><span>2</span><h4>Connect</h4><p>Search, review profiles, and send job requests.</p></article>
+        <article class="landing-step"><span>3</span><h4>Complete Work</h4><p>Track assignment status from start to finish.</p></article>
+        <article class="landing-step"><span>4</span><h4>Rate & Grow</h4><p>Reviews build long-term trust and better opportunities.</p></article>
       </div>
     </div>
   </section>
@@ -297,7 +390,6 @@
       <span class="brand-latin" data-brand-latin>Khoj.com</span>
     </div>
     <div class="footer-tagline">Connecting skilled workers with clients who need them.</div>
-    <a href="pages/admin/admin-login.html" class="footer-admin-link">Admin Access</a>
   </footer>
 
   <!-- Dark / Light mode toggle -->
@@ -307,6 +399,7 @@
     import { loadScript } from './js/firebase-init.js';
     await loadScript('js/data.js');
     await loadScript('js/site-pages.js');
+    await loadScript('js/landing.js');
     await loadScript('js/auth.js');
     // Password show/hide toggles
     document.querySelectorAll('.pwd-toggle').forEach(btn => {

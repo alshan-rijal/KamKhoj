@@ -32,18 +32,35 @@
   btnLookingForWork.addEventListener('click', () => startAuth('worker'));
   btnNeedToHire.addEventListener('click', () => startAuth('client'));
 
+  // Allow direct open to login flow from links like index.html#login or index.html?login=1
+  const url = new URL(window.location.href);
+  if (url.hash === '#login' || url.searchParams.get('login') === '1') {
+    openLoginOnly();
+  }
+
   function startAuth(type) {
     selectedUserType = type;
     heroSection.style.display = 'none';
     authSection.classList.add('active');
+    document.body.classList.add('auth-active');
     authTitle.textContent = type === 'worker' ? 'Worker Account' : 'Client Account';
     switchTab('login');
     updateRegisterForm();
   }
 
+  function openLoginOnly() {
+    selectedUserType = null;
+    heroSection.style.display = 'none';
+    authSection.classList.add('active');
+    document.body.classList.add('auth-active');
+    authTitle.textContent = 'Login To Your Account';
+    switchTab('login');
+  }
+
   /* ── Back Button ── */
   authBackBtn.addEventListener('click', () => {
     authSection.classList.remove('active');
+    document.body.classList.remove('auth-active');
     heroSection.style.display = '';
     clearAllErrors();
   });
@@ -54,6 +71,11 @@
   });
 
   function switchTab(tabName) {
+    if (tabName === 'register' && !selectedUserType) {
+      selectedUserType = 'client';
+      authTitle.textContent = 'Client Account';
+      updateRegisterForm();
+    }
     authTabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
     loginPanel.classList.toggle('active', tabName === 'login');
     registerPanel.classList.toggle('active', tabName === 'register');
@@ -167,9 +189,13 @@
         showToast('Invalid email or password', 'error');
         return;
       }
-      if (user.type !== selectedUserType) {
+      if (selectedUserType && user.type !== selectedUserType) {
         showToast(`This account is registered as a ${user.type}. Please use the correct login type.`, 'error');
         return;
+      }
+
+      if (!selectedUserType) {
+        selectedUserType = user.type;
       }
 
       saveSession({ userId: user.id, userType: user.type });

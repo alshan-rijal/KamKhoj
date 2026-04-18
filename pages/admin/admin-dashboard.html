@@ -90,6 +90,9 @@
                 <button class="adm-btn adm-btn-info" onclick="window.location.href='admin-clients.html'">
                   ➕ Add Client
                 </button>
+                <button class="adm-btn adm-btn-ghost" onclick="window.location.href='admin-messages.html'">
+                  💬 Open Messages
+                </button>
                 <button class="adm-btn adm-btn-success" id="btn-export">
                   📦 Export JSON
                 </button>
@@ -100,105 +103,14 @@
             </div>
 
             <div class="admin-section">
-              <h2 class="section-title">Site Content Management</h2>
-              <form id="site-settings-form">
-                <div class="form-row">
-                  <div class="form-group">
-                    <label class="form-label" for="site-brand-nepali">Brand (Nepali)</label>
-                    <input class="form-input" type="text" id="site-brand-nepali" placeholder="काम">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="site-brand-latin">Brand (Latin)</label>
-                    <input class="form-input" type="text" id="site-brand-latin" placeholder="Khoj.com">
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="site-about-title">About Title</label>
-                  <input class="form-input" type="text" id="site-about-title">
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="site-about-description">About Description</label>
-                  <textarea class="form-textarea" id="site-about-description" rows="3"></textarea>
-                </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label class="form-label" for="site-contact-heading">Contact Heading</label>
-                    <input class="form-input" type="text" id="site-contact-heading">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="site-contact-email">Contact Email</label>
-                    <input class="form-input" type="email" id="site-contact-email">
-                  </div>
-                </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label class="form-label" for="site-contact-phone">Contact Phone</label>
-                    <input class="form-input" type="text" id="site-contact-phone">
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label" for="site-contact-hours">Support Hours</label>
-                    <input class="form-input" type="text" id="site-contact-hours">
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="site-contact-address">Contact Address</label>
-                  <input class="form-input" type="text" id="site-contact-address">
-                </div>
-
-                <div class="dashboard-grid" style="grid-template-columns:1fr 1fr;gap:1rem;">
-                  <div style="border:1px solid rgba(255,255,255,0.08);padding:1rem;border-radius:12px;">
-                    <h3 style="margin-bottom:0.75rem;">Founder</h3>
-                    <div class="form-group"><label class="form-label" for="founder-name">Name</label><input class="form-input" id="founder-name" type="text"></div>
-                    <div class="form-group"><label class="form-label" for="founder-title">Title</label><input class="form-input" id="founder-title" type="text"></div>
-                    <div class="form-group"><label class="form-label" for="founder-bio">Bio</label><textarea class="form-textarea" id="founder-bio" rows="3"></textarea></div>
-                    <div class="form-group">
-                      <label class="form-label" for="founder-image-file">Upload Photo</label>
-                      <input class="form-input" id="founder-image-file" type="file" accept="image/*">
-                      <img id="founder-image-preview" alt="Founder Preview" style="display:none;width:110px;height:110px;object-fit:cover;border-radius:12px;margin-top:10px;border:1px solid rgba(255,255,255,0.2);">
-                      <button class="adm-btn" id="founder-image-remove" type="button" style="display:none;margin-top:8px;">Remove Photo</button>
-                    </div>
-                    <div class="form-group"><label class="form-label" for="founder-linkedin">LinkedIn URL</label><input class="form-input" id="founder-linkedin" type="url"></div>
-                  </div>
-                  <div style="border:1px solid rgba(255,255,255,0.08);padding:1rem;border-radius:12px;">
-                    <h3 style="margin-bottom:0.75rem;">Co-Founder</h3>
-                    <div class="form-group"><label class="form-label" for="cofounder-name">Name</label><input class="form-input" id="cofounder-name" type="text"></div>
-                    <div class="form-group"><label class="form-label" for="cofounder-title">Title</label><input class="form-input" id="cofounder-title" type="text"></div>
-                    <div class="form-group"><label class="form-label" for="cofounder-bio">Bio</label><textarea class="form-textarea" id="cofounder-bio" rows="3"></textarea></div>
-                    <div class="form-group">
-                      <label class="form-label" for="cofounder-image-file">Upload Photo</label>
-                      <input class="form-input" id="cofounder-image-file" type="file" accept="image/*">
-                      <img id="cofounder-image-preview" alt="Co-Founder Preview" style="display:none;width:110px;height:110px;object-fit:cover;border-radius:12px;margin-top:10px;border:1px solid rgba(255,255,255,0.2);">
-                      <button class="adm-btn" id="cofounder-image-remove" type="button" style="display:none;margin-top:8px;">Remove Photo</button>
-                    </div>
-                    <div class="form-group"><label class="form-label" for="cofounder-linkedin">LinkedIn URL</label><input class="form-input" id="cofounder-linkedin" type="url"></div>
-                  </div>
-                </div>
-
-                <div style="margin-top:1rem;display:flex;gap:0.75rem;">
-                  <button class="adm-btn adm-btn-primary" type="submit">Save Site Content</button>
-                </div>
-              </form>
-            </div>
-
-            <!-- Two Column: Charts + Activity -->
-            <div class="dashboard-grid">
-              <!-- Category Distribution -->
-              <div class="admin-section">
-                <h2 class="section-title">Worker Categories</h2>
-                <div class="chart-bars" id="chart-categories"></div>
+              <h2 class="section-title">Admin Shortcuts</h2>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+                <button class="adm-btn adm-btn-ghost" onclick="window.location.href='admin-workers.html'">Manage Workers</button>
+                <button class="adm-btn adm-btn-ghost" onclick="window.location.href='admin-clients.html'">Manage Clients</button>
+                <button class="adm-btn adm-btn-ghost" onclick="window.location.href='admin-messages.html'">Open Messages</button>
+                <button class="adm-btn adm-btn-ghost" onclick="window.location.href='admin-reviews.html'">Moderate Reviews</button>
+                <button class="adm-btn adm-btn-ghost" onclick="window.location.href='admin-payments.html'">Payment Approvals</button>
               </div>
-
-              <!-- Rating Distribution -->
-              <div class="admin-section">
-                <h2 class="section-title">Rating Distribution</h2>
-                <div class="chart-bars" id="chart-ratings"></div>
-              </div>
-            </div>
-
-            <!-- Activity Feed -->
-            <div class="admin-section">
-              <h2 class="section-title">Recent Activity</h2>
-              <div class="activity-feed" id="activity-feed"></div>
             </div>
           </div>
         </main>
@@ -219,60 +131,6 @@
       adminAnimateCountUp(document.getElementById('stat-reviews'), allReviews.length);
       adminAnimateCountUp(document.getElementById('stat-avg'), avgRating, 1500, 1);
 
-      // ── Category Chart ──
-      const catCounts = {};
-      workers.forEach(w => {
-        const cat = w.category || 'Other';
-        catCounts[cat] = (catCounts[cat] || 0) + 1;
-      });
-      const maxCat = Math.max(...Object.values(catCounts), 1);
-      const chartCat = document.getElementById('chart-categories');
-      chartCat.innerHTML = Object.entries(catCounts)
-        .sort((a, b) => b[1] - a[1])
-        .map(([cat, count]) => `
-          <div class="bar-row">
-            <span class="bar-label">${escHtml(cat)}</span>
-            <div class="bar-track">
-              <div class="bar-fill" style="width:${(count / maxCat) * 100}%;">${count}</div>
-            </div>
-          </div>
-        `).join('') || '<p style="color:rgba(255,255,255,0.3);text-align:center;">No workers yet.</p>';
-
-      // ── Rating Chart ──
-      const ratingCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-      allReviews.forEach(r => { if (ratingCounts[r.stars] !== undefined) ratingCounts[r.stars]++; });
-      const maxRat = Math.max(...Object.values(ratingCounts), 1);
-      const chartRat = document.getElementById('chart-ratings');
-      chartRat.innerHTML = [5, 4, 3, 2, 1].map(star => `
-        <div class="bar-row">
-          <span class="bar-label">${'★'.repeat(star)}${'☆'.repeat(5 - star)}</span>
-          <div class="bar-track">
-            <div class="bar-fill bar-fill-gold" style="width:${(ratingCounts[star] / maxRat) * 100}%;">${ratingCounts[star]}</div>
-          </div>
-        </div>
-      `).join('');
-
-      // ── Activity Feed ──
-      const activities = getAdminActivity().slice(0, 10);
-      const feedEl = document.getElementById('activity-feed');
-      if (activities.length === 0) {
-        feedEl.innerHTML = '<p style="color:rgba(255,255,255,0.3);text-align:center;padding:2rem;">No activity yet.</p>';
-      } else {
-        feedEl.innerHTML = activities.map(a => `
-          <div class="activity-item">
-            <div class="activity-icon">${activityIcon(a.action)}</div>
-            <div class="activity-body">
-              <div class="activity-text">${escHtml(a.description)}</div>
-              <div class="activity-time">${adminRelativeTime(a.timestamp)}</div>
-            </div>
-          </div>
-        `).join('');
-      }
-
-      function activityIcon(action) {
-        const map = { create: '➕', update: '✏️', delete: '🗑️', toggle: '🔄', flag: '🚩', export: '📦', clear: '⚠️', login: '🔑' };
-        return map[action] || '📋';
-      }
 
       // ── Export ──
       document.getElementById('btn-export').addEventListener('click', () => {
@@ -280,172 +138,6 @@
         logAdminActivity('export', 'Exported platform data as JSON');
         adminShowToast('Data exported successfully!', 'success');
       });
-
-      // ── Site Settings ──
-      const siteForm = document.getElementById('site-settings-form');
-      const siteSettings = adminGetSiteSettings();
-
-      document.getElementById('site-brand-nepali').value = siteSettings.brand?.nepali || siteSettings.brand?.hindi || 'काम';
-      document.getElementById('site-brand-latin').value = siteSettings.brand?.latin || 'Khoj.com';
-      document.getElementById('site-about-title').value = siteSettings.about?.title || '';
-      document.getElementById('site-about-description').value = siteSettings.about?.description || '';
-      document.getElementById('site-contact-heading').value = siteSettings.contact?.heading || '';
-      document.getElementById('site-contact-email').value = siteSettings.contact?.email || '';
-      document.getElementById('site-contact-phone').value = siteSettings.contact?.phone || '';
-      document.getElementById('site-contact-hours').value = siteSettings.contact?.supportHours || '';
-      document.getElementById('site-contact-address').value = siteSettings.contact?.address || '';
-
-      const founder = (siteSettings.founders && siteSettings.founders[0]) || {};
-      const coFounder = (siteSettings.founders && siteSettings.founders[1]) || {};
-      let founderImageData = founder.image || '';
-      let coFounderImageData = coFounder.image || '';
-
-      document.getElementById('founder-name').value = founder.name || '';
-      document.getElementById('founder-title').value = founder.title || '';
-      document.getElementById('founder-bio').value = founder.bio || '';
-      document.getElementById('founder-linkedin').value = founder.linkedin || '';
-
-      document.getElementById('cofounder-name').value = coFounder.name || '';
-      document.getElementById('cofounder-title').value = coFounder.title || '';
-      document.getElementById('cofounder-bio').value = coFounder.bio || '';
-      document.getElementById('cofounder-linkedin').value = coFounder.linkedin || '';
-
-      const founderImageInput = document.getElementById('founder-image-file');
-      const coFounderImageInput = document.getElementById('cofounder-image-file');
-      const founderPreview = document.getElementById('founder-image-preview');
-      const coFounderPreview = document.getElementById('cofounder-image-preview');
-      const founderRemoveBtn = document.getElementById('founder-image-remove');
-      const coFounderRemoveBtn = document.getElementById('cofounder-image-remove');
-
-      paintImagePreview(founderPreview, founderRemoveBtn, founderImageData);
-      paintImagePreview(coFounderPreview, coFounderRemoveBtn, coFounderImageData);
-
-      founderImageInput.addEventListener('change', async (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        try {
-          founderImageData = await fileToCompressedDataUrl(file, 720, 0.78);
-          paintImagePreview(founderPreview, founderRemoveBtn, founderImageData);
-        } catch (err) {
-          adminShowToast(err.message || 'Could not process founder photo.', 'error');
-          founderImageInput.value = '';
-        }
-      });
-
-      coFounderImageInput.addEventListener('change', async (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        try {
-          coFounderImageData = await fileToCompressedDataUrl(file, 720, 0.78);
-          paintImagePreview(coFounderPreview, coFounderRemoveBtn, coFounderImageData);
-        } catch (err) {
-          adminShowToast(err.message || 'Could not process co-founder photo.', 'error');
-          coFounderImageInput.value = '';
-        }
-      });
-
-      founderRemoveBtn.addEventListener('click', () => {
-        founderImageData = '';
-        founderImageInput.value = '';
-        paintImagePreview(founderPreview, founderRemoveBtn, founderImageData);
-      });
-
-      coFounderRemoveBtn.addEventListener('click', () => {
-        coFounderImageData = '';
-        coFounderImageInput.value = '';
-        paintImagePreview(coFounderPreview, coFounderRemoveBtn, coFounderImageData);
-      });
-
-      siteForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const payload = {
-          brand: {
-            nepali: document.getElementById('site-brand-nepali').value.trim() || 'काम',
-            latin: document.getElementById('site-brand-latin').value.trim() || 'Khoj.com'
-          },
-          about: {
-            title: document.getElementById('site-about-title').value.trim(),
-            description: document.getElementById('site-about-description').value.trim()
-          },
-          contact: {
-            heading: document.getElementById('site-contact-heading').value.trim(),
-            email: document.getElementById('site-contact-email').value.trim(),
-            phone: document.getElementById('site-contact-phone').value.trim(),
-            supportHours: document.getElementById('site-contact-hours').value.trim(),
-            address: document.getElementById('site-contact-address').value.trim()
-          },
-          founders: [
-            {
-              role: 'Founder',
-              name: document.getElementById('founder-name').value.trim(),
-              title: document.getElementById('founder-title').value.trim(),
-              bio: document.getElementById('founder-bio').value.trim(),
-              image: founderImageData,
-              linkedin: document.getElementById('founder-linkedin').value.trim()
-            },
-            {
-              role: 'Co-Founder',
-              name: document.getElementById('cofounder-name').value.trim(),
-              title: document.getElementById('cofounder-title').value.trim(),
-              bio: document.getElementById('cofounder-bio').value.trim(),
-              image: coFounderImageData,
-              linkedin: document.getElementById('cofounder-linkedin').value.trim()
-            }
-          ]
-        };
-
-        adminSaveSiteSettings(payload);
-        logAdminActivity('update', 'Updated site content settings');
-        adminShowToast('Site content updated successfully.', 'success');
-      });
-
-      function paintImagePreview(imgEl, removeBtn, value) {
-        if (value) {
-          imgEl.src = value;
-          imgEl.style.display = '';
-          removeBtn.style.display = '';
-        } else {
-          imgEl.src = '';
-          imgEl.style.display = 'none';
-          removeBtn.style.display = 'none';
-        }
-      }
-
-      function fileToCompressedDataUrl(file, maxWidth, quality) {
-        return new Promise((resolve, reject) => {
-          if (!file.type.startsWith('image/')) {
-            reject(new Error('Please upload an image file.'));
-            return;
-          }
-          if (file.size > 5 * 1024 * 1024) {
-            reject(new Error('Image must be under 5MB.'));
-            return;
-          }
-
-          const reader = new FileReader();
-          reader.onload = () => {
-            const img = new Image();
-            img.onload = () => {
-              let w = img.width;
-              let h = img.height;
-              if (w > maxWidth) {
-                h = Math.round(h * maxWidth / w);
-                w = maxWidth;
-              }
-              const canvas = document.createElement('canvas');
-              canvas.width = w;
-              canvas.height = h;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(img, 0, 0, w, h);
-              resolve(canvas.toDataURL('image/jpeg', quality));
-            };
-            img.onerror = () => reject(new Error('Invalid image selected.'));
-            img.src = reader.result;
-          };
-          reader.onerror = () => reject(new Error('Could not read image file.'));
-          reader.readAsDataURL(file);
-        });
-      }
 
       // ── Clear All Data ──
       document.getElementById('btn-clear-all').addEventListener('click', () => {
@@ -503,9 +195,6 @@
           setTimeout(() => location.reload(), 1000);
         });
       }
-
-      // Log this visit
-      logAdminActivity('login', 'Viewed admin dashboard');
 
     })();
   </script>

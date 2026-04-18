@@ -218,18 +218,18 @@ function categoryOptionsHtml(selected) {
 /* ── Generate Sidebar HTML ── */
 function adminSidebarHTML(activePage) {
   const pages = [
-    { id: 'dashboard', icon: '🏠', label: 'Dashboard', href: 'admin-dashboard.html' },
-    { id: 'workers', icon: '👷', label: 'Workers', href: 'admin-workers.html' },
-    { id: 'clients', icon: '🧑‍💼', label: 'Clients', href: 'admin-clients.html' },
-    { id: 'reviews', icon: '⭐', label: 'Reviews', href: 'admin-reviews.html' },
-    { id: 'payments', icon: '💳', label: 'Payments', href: 'admin-payments.html' },
+    { id: 'dashboard', icon: '◈', label: 'Dashboard', href: 'admin-dashboard.html' },
+    { id: 'workers', icon: '◈', label: 'Workers', href: 'admin-workers.html' },
+    { id: 'clients', icon: '◈', label: 'Clients', href: 'admin-clients.html' },
+    { id: 'messages', icon: '◈', label: 'Messages', href: 'admin-messages.html' },
+    { id: 'reviews', icon: '◈', label: 'Reviews', href: 'admin-reviews.html' },
+    { id: 'payments', icon: '◈', label: 'Payments', href: 'admin-payments.html' },
   ];
   return `
     <aside class="admin-sidebar">
       <div class="sidebar-top">
-        <div class="sidebar-label">Admin Panel</div>
+        <div class="sidebar-label">Control Center</div>
         <a href="admin-dashboard.html" class="sidebar-brand">
-          <span class="sidebar-brand-icon">⚡</span>
           <span class="brand-text">
             <span class="brand-nepali">काम</span>
             <span class="brand-latin">Khoj.com</span>
@@ -238,6 +238,7 @@ function adminSidebarHTML(activePage) {
       </div>
       <div class="sidebar-divider"></div>
       <nav class="sidebar-nav">
+        <div class="sidebar-nav-title">Main Navigation</div>
         ${pages.map(p => `
           <a href="${p.href}" class="sidebar-nav-item ${activePage === p.id ? 'active' : ''}">
             <span class="nav-icon">${p.icon}</span> ${p.label}
@@ -251,7 +252,7 @@ function adminSidebarHTML(activePage) {
       <div class="sidebar-bottom">
         <div class="admin-avatar-sm">SA</div>
         <div class="sidebar-admin-info">
-          <div class="sidebar-admin-name">System Administrator</div>
+          <div class="sidebar-admin-name">System Admin</div>
           <span class="sidebar-admin-badge">Super Admin</span>
         </div>
       </div>
@@ -268,14 +269,14 @@ function adminTopbarHTML(title) {
         <button class="adm-hamburger" id="adm-hamburger" aria-label="Menu">
           <span></span><span></span><span></span>
         </button>
-        <h1>${title}</h1>
+        <div>
+          <div class="topbar-eyebrow">Admin Workspace</div>
+          <h1>${title}</h1>
+        </div>
       </div>
       <div class="topbar-right">
         <span class="topbar-clock" id="topbar-clock"></span>
         <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle dark/light mode" title="Toggle dark/light mode" style="position:relative;bottom:auto;right:auto;width:38px;height:38px;font-size:1.1rem;box-shadow:none;border-radius:50%;flex-shrink:0;">🌙</button>
-        <div class="topbar-bell" id="topbar-bell">
-          🔔<span class="topbar-bell-badge" id="bell-badge" style="display:none;">0</span>
-        </div>
         <div style="position:relative;">
           <div class="topbar-avatar" id="topbar-avatar">SA</div>
           <div class="topbar-dropdown" id="topbar-dropdown">

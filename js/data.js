@@ -6,8 +6,38 @@
    ======================================== */
 
 const DATA_KEYS = {
-  session: 'wfc_session'
+  session: 'wfc_session',
+  contactQueries: 'wfc_contact_queries'
 };
+
+const STATIC_ABOUT_CONTENT = {
+  title: 'About Kam Khoj.com',
+  description: 'Kam Khoj.com is built to make local hiring easier, safer, and faster. We connect clients with verified workers and help workers grow with consistent opportunities across cities in Nepal.'
+};
+
+const STATIC_DEVELOPER_PROFILE = {
+  name: 'Alshan Rijal',
+  role: 'Lead Developer',
+  email: 'alshanrizal69@gmail.com',
+  phone: '+977-9743810009, +977-9702383964',
+  address: 'Damak, Jhapa, Nepal',
+  availability: 'Sunday-Friday, 9:00 AM-6:00 PM',
+  bio: 'Maintaining Kam Khoj with a focus on reliable hiring workflows, trust, and practical user experience for workers and clients across Nepal.',
+  // Edit this file path to change developer photo.
+  image: '../assets/developers/photo.jpeg'
+};
+
+const STATIC_FOUNDERS = [
+  {
+    role: 'Lead Developer',
+    name: STATIC_DEVELOPER_PROFILE.name,
+    title: 'Founder & Platform Engineer',
+    bio: 'Alshan designs and builds Kam Khoj with a focus on trust, speed, and practical hiring workflows that work for real users every day.',
+    // Keep developer images in assets/developers for easy replacement.
+    image: '../assets/developers/photo.jpeg',
+    linkedin: 'https://www.linkedin.com/'
+  }
+];
 
 const DEFAULT_SITE_SETTINGS = {
   brand: {
@@ -15,34 +45,17 @@ const DEFAULT_SITE_SETTINGS = {
     latin: 'Khoj.com'
   },
   about: {
-    title: 'About काम Khoj.com',
-    description: 'काम Khoj.com helps clients quickly discover trusted local workers and helps skilled workers find reliable job opportunities in their area.'
+    title: STATIC_ABOUT_CONTENT.title,
+    description: STATIC_ABOUT_CONTENT.description
   },
   contact: {
-    heading: 'Contact काम Khoj.com',
-    email: 'hello@khoj.com',
-    phone: '+977-9800000000',
-    address: 'Putalisadak, Kathmandu, Nepal',
+    heading: 'Contact Kam Khoj.com',
+    email: 'alshanrizal69@gmail.com',
+    phone: '+977-9743810009, +977-9702383964',
+    address: 'Damak, Jhapa, Nepal',
     supportHours: 'Sun-Fri, 9:00 AM - 6:00 PM'
   },
-  founders: [
-    {
-      role: 'Founder',
-      name: 'Aarav Sharma',
-      title: 'Founder & Product Vision Lead',
-      bio: 'Aarav leads platform strategy and focuses on building trustworthy hiring experiences for workers and clients.',
-      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80',
-      linkedin: 'https://www.linkedin.com/'
-    },
-    {
-      role: 'Co-Founder',
-      name: 'Saanvi Koirala',
-      title: 'Co-Founder & Operations Lead',
-      bio: 'Saanvi designs service operations and quality systems that keep the platform reliable across every city.',
-      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80',
-      linkedin: 'https://www.linkedin.com/'
-    }
-  ]
+  founders: STATIC_FOUNDERS
 };
 
 /* ── Category Color Map ── */
@@ -448,15 +461,15 @@ function savePaymentSettings(settings) {
 
 function normalizeSiteSettings(settings) {
   const input = settings || {};
-  const foundersInput = Array.isArray(input.founders) ? input.founders : [];
   return {
     brand: {
       nepali: input.brand?.nepali || input.brand?.hindi || DEFAULT_SITE_SETTINGS.brand.nepali,
       latin: input.brand?.latin || DEFAULT_SITE_SETTINGS.brand.latin
     },
     about: {
-      title: input.about?.title || DEFAULT_SITE_SETTINGS.about.title,
-      description: input.about?.description || DEFAULT_SITE_SETTINGS.about.description
+      // About copy is now code-owned and not editable from admin panel.
+      title: STATIC_ABOUT_CONTENT.title,
+      description: STATIC_ABOUT_CONTENT.description
     },
     contact: {
       heading: input.contact?.heading || DEFAULT_SITE_SETTINGS.contact.heading,
@@ -465,36 +478,153 @@ function normalizeSiteSettings(settings) {
       address: input.contact?.address || DEFAULT_SITE_SETTINGS.contact.address,
       supportHours: input.contact?.supportHours || DEFAULT_SITE_SETTINGS.contact.supportHours
     },
-    founders: [0, 1].map((idx) => ({
-      role: foundersInput[idx]?.role || DEFAULT_SITE_SETTINGS.founders[idx].role,
-      name: foundersInput[idx]?.name || DEFAULT_SITE_SETTINGS.founders[idx].name,
-      title: foundersInput[idx]?.title || DEFAULT_SITE_SETTINGS.founders[idx].title,
-      bio: foundersInput[idx]?.bio || DEFAULT_SITE_SETTINGS.founders[idx].bio,
-      image: foundersInput[idx]?.image || DEFAULT_SITE_SETTINGS.founders[idx].image,
-      linkedin: foundersInput[idx]?.linkedin || DEFAULT_SITE_SETTINGS.founders[idx].linkedin
-    }))
+    // Founder cards are code-owned for predictable performance and media loading.
+    founders: STATIC_FOUNDERS.map((f) => ({ ...f }))
   };
 }
 
+function getStaticAboutContent() {
+  return { ...STATIC_ABOUT_CONTENT };
+}
+
+function getAboutDeveloper() {
+  return { ...STATIC_FOUNDERS[0] };
+}
+
+function getDeveloperProfile() {
+  return { ...STATIC_DEVELOPER_PROFILE };
+}
+
+/* ═══════════════════════════════════════
+   CONTACT QUERIES / CHAT
+   ═══════════════════════════════════════ */
+
+function getContactQueries() {
+  return window._wfcContactQueriesCache || [];
+}
+
+function saveContactQueries(queries) {
+  const safe = Array.isArray(queries) ? [...queries] : [];
+  window._wfcContactQueriesCache = safe;
+  localStorage.setItem(DATA_KEYS.contactQueries, JSON.stringify(safe));
+  _syncContactQueriesToFirestore(safe);
+}
+
+function createContactQuery(data) {
+  const senderId = data?.senderId || '';
+  const message = (data?.message || '').trim();
+  const topic = (data?.topic || 'general').trim();
+
+  if (!senderId) {
+    return { success: false, error: 'Please log in before sending a message.' };
+  }
+
+  const sender = getUserById(senderId);
+  if (!sender) {
+    return { success: false, error: 'Only an existing user can send a message.' };
+  }
+
+  if (!message) {
+    return { success: false, error: 'Message cannot be empty.' };
+  }
+
+  const query = {
+    id: generateId(),
+    senderId: sender.id,
+    senderName: sender.name,
+    senderType: sender.type,
+    topic,
+    message,
+    createdAt: new Date().toISOString(),
+    lastUpdatedAt: new Date().toISOString(),
+    status: 'open',
+    replies: []
+  };
+
+  const queries = getContactQueries();
+  queries.unshift(query);
+  saveContactQueries(queries);
+  return { success: true, query };
+}
+
+function addDeveloperReplyToContactQuery(queryId, message, meta = {}) {
+  const cleanMessage = (message || '').trim();
+  if (!queryId || !cleanMessage) return { success: false, error: 'Invalid reply.' };
+
+  const queries = getContactQueries();
+  const idx = queries.findIndex((q) => q.id === queryId);
+  if (idx === -1) return { success: false, error: 'Query not found.' };
+
+  const reply = {
+    id: generateId(),
+    senderType: (meta.senderType || 'developer'),
+    senderName: (meta.senderName || STATIC_DEVELOPER_PROFILE.name),
+    message: cleanMessage,
+    createdAt: new Date().toISOString()
+  };
+
+  const existingReplies = Array.isArray(queries[idx].replies) ? queries[idx].replies : [];
+  queries[idx].replies = [...existingReplies, reply];
+  queries[idx].status = 'replied';
+  queries[idx].lastUpdatedAt = reply.createdAt;
+  saveContactQueries(queries);
+  return { success: true, reply };
+}
+
+function updateContactQueryStatus(queryId, status) {
+  const allowed = ['open', 'replied', 'closed'];
+  if (!queryId || !allowed.includes(status)) {
+    return { success: false, error: 'Invalid status update.' };
+  }
+
+  const queries = getContactQueries();
+  const idx = queries.findIndex((q) => q.id === queryId);
+  if (idx === -1) return { success: false, error: 'Query not found.' };
+
+  queries[idx].status = status;
+  queries[idx].lastUpdatedAt = new Date().toISOString();
+  saveContactQueries(queries);
+  return { success: true, query: queries[idx] };
+}
+
+function deleteContactQuery(queryId) {
+  if (!queryId) return { success: false, error: 'Query id is required.' };
+
+  const queries = getContactQueries();
+  const idx = queries.findIndex((q) => q.id === queryId);
+  if (idx === -1) return { success: false, error: 'Query not found.' };
+
+  const removed = queries.splice(idx, 1)[0];
+  saveContactQueries(queries);
+  return { success: true, query: removed };
+}
+
+function getContactQueriesForUser(userId) {
+  if (!userId) return [];
+  return getContactQueries().filter((q) => q.senderId === userId);
+}
+
+async function _syncContactQueriesToFirestore(queries) {
+  const { doc, setDoc } = window._fs;
+  try {
+    await setDoc(doc(window._db, 'config', 'contact_queries'), { queries });
+    console.log('Contact queries Firestore sync OK');
+  } catch (e) {
+    console.error('Contact queries sync error:', e);
+  }
+}
+
 function getSiteSettings() {
-  return normalizeSiteSettings(window._wfcSiteSettingsCache || DEFAULT_SITE_SETTINGS);
+  // Site/developer content is code-managed. Avoid DB-driven overrides.
+  return normalizeSiteSettings(DEFAULT_SITE_SETTINGS);
 }
 
 function saveSiteSettings(settings) {
-  const normalized = normalizeSiteSettings(settings);
-  window._wfcSiteSettingsCache = { ...normalized };
-  localStorage.setItem('wfc_site_settings', JSON.stringify(normalized));
-  _syncSiteSettingsToFirestore(normalized);
+  return normalizeSiteSettings(settings);
 }
 
 async function _syncSiteSettingsToFirestore(settings) {
-  const { doc, setDoc } = window._fs;
-  try {
-    await setDoc(doc(window._db, 'config', 'site_settings'), settings);
-    console.log('Site settings Firestore sync OK');
-  } catch (e) {
-    console.error('Site settings sync error:', e);
-  }
+  return settings;
 }
 
 async function _syncPaymentSettingsToFirestore(settings) {

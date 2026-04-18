@@ -29,26 +29,50 @@
 
   <main class="static-page">
     <div class="container">
-      <section class="static-hero">
+      <section class="static-hero contact-hero-enhanced">
         <h1 id="contact-title">Contact काम Khoj.com</h1>
-        <p>Need support, onboarding help, or partnership details? Reach out through the channels below.</p>
+        <p>Need support, onboarding help, or partnership details? Connect directly with our developer support and track your query responses in one place.</p>
       </section>
 
-      <section class="contact-grid">
-        <article class="info-card">
+      <section class="contact-spotlight-wrap">
+        <article class="info-card contact-spotlight">
           <h3>Support Details</h3>
           <div class="info-list">
-            <div class="info-row"><span>Email</span><span id="contact-email">hello@khoj.com</span></div>
-            <div class="info-row"><span>Phone</span><span id="contact-phone">+977-9800000000</span></div>
-            <div class="info-row"><span>Address</span><span id="contact-address">Putalisadak, Kathmandu, Nepal</span></div>
-            <div class="info-row"><span>Hours</span><span id="contact-hours">Sun-Fri, 9:00 AM - 6:00 PM</span></div>
+            <div class="info-row"><span>Public Email</span><span id="contact-email">alshanrizal69@gmail.com</span></div>
+            <div class="info-row"><span>Support Phone</span><span id="contact-phone">+977-9743810009, +977-9702383964</span></div>
+            <div class="info-row"><span>Office</span><span id="contact-address">Damak, Jhapa, Nepal</span></div>
+            <div class="info-row"><span>Support Hours</span><span id="contact-hours">Sun-Fri, 9:00 AM - 6:00 PM</span></div>
           </div>
+          <p style="margin-top:12px;">Clients can ask for hiring support and verification help. Workers can ask for profile guidance and assignment assistance.</p>
+        </article>
+      </section>
+
+      <section class="contact-grid contact-grid-enhanced contact-main-grid">
+        <article class="info-card" id="contact-current-user">
+          <h3>Your Contact Identity</h3>
         </article>
 
-        <article class="info-card">
-          <h3>Why Contact Us</h3>
-          <p style="margin-bottom:10px;">Clients can get help with finding the right worker category and payment verification updates.</p>
-          <p>Workers can request profile support, assignment support, and onboarding guidance from the admin team.</p>
+        <article class="info-card chat-card">
+          <h3>Support Inbox</h3>
+          <p class="chat-rule">Only existing logged-in workers or clients can open support tickets and receive admin replies.</p>
+
+          <div id="contact-chat-list" class="contact-chat-list"></div>
+
+          <form id="contact-chat-form" class="contact-chat-form">
+            <label for="contact-chat-topic" class="contact-chat-topic-label">Ticket Topic</label>
+            <select id="contact-chat-topic" class="form-select contact-chat-topic">
+              <option value="general">General Help</option>
+              <option value="account">Account / Login</option>
+              <option value="payment">Payments</option>
+              <option value="assignment">Assignments</option>
+              <option value="profile">Profile Update</option>
+            </select>
+            <textarea id="contact-chat-input" class="form-textarea" rows="3" placeholder="Write your query for developer support..."></textarea>
+            <div class="contact-chat-actions">
+              <span id="contact-chat-helper" class="contact-chat-helper"></span>
+              <button type="submit" class="btn btn-primary">Send Message</button>
+            </div>
+          </form>
         </article>
       </section>
     </div>
@@ -66,6 +90,7 @@
     import { loadScript } from '../js/firebase-init.js';
     await loadScript('../js/data.js');
     await loadScript('../js/site-pages.js');
+    await loadScript('../js/contact.js');
   </script>
 </body>
 </html>

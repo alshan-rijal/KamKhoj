@@ -25,134 +25,68 @@ const db = getFirestore(app);
 window._db = db;
 window._fs = { collection, getDocs, doc, setDoc, deleteDoc, getDoc };
 
-// ── ONE-TIME DATA WIPE — flag stored in Firestore so it's reliable across all browsers ──
-try {
-  const wipeFlag = await getDoc(doc(db, 'config', 'wipe_v3'));
-  if (!wipeFlag.exists()) {
-    console.log('Running one-time Firestore wipe...');
-    const wipeSnap = await getDocs(collection(db, 'users'));
-    await Promise.all(wipeSnap.docs.map(d => deleteDoc(d.ref)));
-    await deleteDoc(doc(db, 'config', 'admin_activity'));
-    await setDoc(doc(db, 'config', 'wipe_v3'), { done: true, at: new Date().toISOString() });
-    console.log('Wipe complete.');
+// ── Fast local cache warm-up (instant first paint) ──
+function readLocalJson(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (_e) {
+    return fallback;
   }
-} catch (e) {
-  console.error('Wipe check failed:', e);
 }
-// Always clear stale localStorage user/session data on load
-localStorage.removeItem('wfc_cleared_v1');
-localStorage.removeItem('wfc_cleared_v2');
-localStorage.removeItem('wfc_cleared_v3');
 
-// ── Load users — Firestore is the ONLY source of truth ──
-// If Firestore is empty, cache starts empty (no localStorage push-back).
-// Only fall back to localStorage if Firestore is genuinely unreachable (network error).
-let users = [];
-try {
-  const usersSnapshot = await getDocs(collection(db, 'users'));
-  usersSnapshot.forEach(d => users.push(d.data()));
-  // Keep localStorage in sync for instant reads on page reload
-  localStorage.setItem('wfc_users', JSON.stringify(users));
-  console.log('Loaded', users.length, 'users from Firestore.');
-} catch (e) {
-  // Genuine network failure — use localStorage as read-only emergency fallback
-  console.warn('Firestore unreachable, using localStorage as emergency fallback:', e);
-  const local = localStorage.getItem('wfc_users');
-  if (local) users = JSON.parse(local);
-}
+let users = readLocalJson('wfc_users', []);
+let assignments = readLocalJson('wfc_assignments', []);
+let paymentSettings = readLocalJson('wfc_payment_settings', {
+  esewaQR: '', khaltiQR: '', bankQR: '', bankAccountNumber: '', bankName: '', esewaName: '', khaltiName: ''
+});
+let activities = readLocalJson('wfc_admin_activity', []);
+let contactQueries = readLocalJson('wfc_contact_queries', []);
+
 window._wfcUsersCache = users;
-
-// ── Load assignments — Firestore is source of truth ──
-let assignments = [];
-try {
-  const assignSnap = await getDocs(collection(db, 'assignments'));
-  assignSnap.forEach(d => assignments.push(d.data()));
-  localStorage.setItem('wfc_assignments', JSON.stringify(assignments));
-  console.log('Loaded', assignments.length, 'assignments from Firestore.');
-} catch (e) {
-  console.warn('Firestore assignments read failed, using localStorage:', e);
-  const localAssign = localStorage.getItem('wfc_assignments');
-  if (localAssign) assignments = JSON.parse(localAssign);
-}
 window._wfcAssignmentsCache = assignments;
-
-// ── Load payment settings from Firestore ──
-let paymentSettings = { esewaQR: '', khaltiQR: '', bankQR: '', bankAccountNumber: '', bankName: '', esewaName: '', khaltiName: '' };
-try {
-  const payDoc = await getDoc(doc(db, 'config', 'payment_settings'));
-  if (payDoc.exists()) {
-    paymentSettings = payDoc.data();
-    localStorage.setItem('wfc_payment_settings', JSON.stringify(paymentSettings));
-  }
-} catch (e) {
-  console.warn('Payment settings read failed, using localStorage:', e);
-  const localPay = localStorage.getItem('wfc_payment_settings');
-  if (localPay) paymentSettings = JSON.parse(localPay);
-}
 window._wfcPaymentSettingsCache = paymentSettings;
-
-// ── Load site settings from Firestore ──
-let siteSettings = {
-  brand: { nepali: 'काम', latin: 'Khoj.com' },
-  about: {
-    title: 'About काम Khoj.com',
-    description: 'काम Khoj.com helps clients quickly discover trusted local workers and helps skilled workers find reliable job opportunities in their area.'
-  },
-  contact: {
-    heading: 'Contact काम Khoj.com',
-    email: 'hello@khoj.com',
-    phone: '+977-9800000000',
-    address: 'Putalisadak, Kathmandu, Nepal',
-    supportHours: 'Sun-Fri, 9:00 AM - 6:00 PM'
-  },
-  founders: [
-    {
-      role: 'Founder',
-      name: 'Aarav Sharma',
-      title: 'Founder & Product Vision Lead',
-      bio: 'Aarav leads platform strategy and focuses on building trustworthy hiring experiences for workers and clients.',
-      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80',
-      linkedin: 'https://www.linkedin.com/'
-    },
-    {
-      role: 'Co-Founder',
-      name: 'Saanvi Koirala',
-      title: 'Co-Founder & Operations Lead',
-      bio: 'Saanvi designs service operations and quality systems that keep the platform reliable across every city.',
-      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80',
-      linkedin: 'https://www.linkedin.com/'
-    }
-  ]
-};
-try {
-  const siteDoc = await getDoc(doc(db, 'config', 'site_settings'));
-  if (siteDoc.exists()) {
-    siteSettings = { ...siteSettings, ...siteDoc.data() };
-    localStorage.setItem('wfc_site_settings', JSON.stringify(siteSettings));
-  }
-} catch (e) {
-  console.warn('Site settings read failed, using localStorage:', e);
-  const localSite = localStorage.getItem('wfc_site_settings');
-  if (localSite) siteSettings = JSON.parse(localSite);
-}
-window._wfcSiteSettingsCache = siteSettings;
-
-// ── Load admin activity — Firestore is source of truth ──
-let activities = [];
-try {
-  const actDoc = await getDoc(doc(db, 'config', 'admin_activity'));
-  if (actDoc.exists()) {
-    activities = actDoc.data().activities || [];
-    localStorage.setItem('wfc_admin_activity', JSON.stringify(activities));
-  }
-  // If Firestore has no activity doc, cache starts empty — that's correct after wipe
-} catch (e) {
-  // Network failure — emergency fallback
-  console.warn('Firestore activity read failed, using localStorage:', e);
-  const localAct = localStorage.getItem('wfc_admin_activity');
-  if (localAct) activities = JSON.parse(localAct);
-}
 window._wfcActivityCache = activities;
+window._wfcContactQueriesCache = contactQueries;
+
+// ── Firestore refresh (parallel to reduce load latency) ──
+const [usersRes, assignmentsRes, payRes, activityRes, contactRes] = await Promise.allSettled([
+  getDocs(collection(db, 'users')),
+  getDocs(collection(db, 'assignments')),
+  getDoc(doc(db, 'config', 'payment_settings')),
+  getDoc(doc(db, 'config', 'admin_activity')),
+  getDoc(doc(db, 'config', 'contact_queries'))
+]);
+
+if (usersRes.status === 'fulfilled') {
+  users = usersRes.value.docs.map((d) => d.data());
+  window._wfcUsersCache = users;
+  localStorage.setItem('wfc_users', JSON.stringify(users));
+}
+
+if (assignmentsRes.status === 'fulfilled') {
+  assignments = assignmentsRes.value.docs.map((d) => d.data());
+  window._wfcAssignmentsCache = assignments;
+  localStorage.setItem('wfc_assignments', JSON.stringify(assignments));
+}
+
+if (payRes.status === 'fulfilled' && payRes.value.exists()) {
+  paymentSettings = payRes.value.data();
+  window._wfcPaymentSettingsCache = paymentSettings;
+  localStorage.setItem('wfc_payment_settings', JSON.stringify(paymentSettings));
+}
+
+if (activityRes.status === 'fulfilled' && activityRes.value.exists()) {
+  activities = activityRes.value.data().activities || [];
+  window._wfcActivityCache = activities;
+  localStorage.setItem('wfc_admin_activity', JSON.stringify(activities));
+}
+
+if (contactRes.status === 'fulfilled' && contactRes.value.exists()) {
+  contactQueries = contactRes.value.data().queries || [];
+  window._wfcContactQueriesCache = contactQueries;
+  localStorage.setItem('wfc_contact_queries', JSON.stringify(contactQueries));
+}
 
 // ── Script loader utility ──
 export function loadScript(src) {

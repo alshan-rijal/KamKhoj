@@ -25,27 +25,33 @@
     const description = document.getElementById('about-description');
     if (!title || !description) return;
 
-    title.textContent = site.about.title;
-    description.textContent = site.about.description;
+    const staticAbout = typeof getStaticAboutContent === 'function' ? getStaticAboutContent() : site.about;
+    title.textContent = staticAbout.title;
+    description.textContent = staticAbout.description;
 
     const slides = document.getElementById('founder-slides');
     if (!slides) return;
 
-    const founders = Array.isArray(site.founders) ? site.founders.slice(0, 2) : [];
-    slides.innerHTML = founders.map((f) => `
-      <article class="founder-slide">
-        <img class="founder-photo" src="${escapeHtml(f.image)}" alt="${escapeHtml(f.name)}">
+    const founder = typeof getAboutDeveloper === 'function'
+      ? getAboutDeveloper()
+      : (Array.isArray(site.founders) ? site.founders[0] : null);
+    if (!founder) {
+      slides.innerHTML = '<p class="text-muted">Developer profile is coming soon.</p>';
+      return;
+    }
+
+    slides.innerHTML = `
+      <article class="founder-slide founder-single">
+        <img class="founder-photo" src="${escapeHtml(founder.image)}" alt="${escapeHtml(founder.name)}">
         <div>
-          <div class="founder-role">${escapeHtml(f.role)}</div>
-          <h2 class="founder-name">${escapeHtml(f.name)}</h2>
-          <p class="founder-title">${escapeHtml(f.title)}</p>
-          <p>${escapeHtml(f.bio)}</p>
-          <p style="margin-top:12px;"><a href="${escapeHtml(f.linkedin)}" target="_blank" rel="noreferrer">View profile</a></p>
+          <div class="founder-role">${escapeHtml(founder.role)}</div>
+          <h2 class="founder-name">${escapeHtml(founder.name)}</h2>
+          <p class="founder-title">${escapeHtml(founder.title)}</p>
+          <p>${escapeHtml(founder.bio)}</p>
+          <p style="margin-top:12px;"><a href="${escapeHtml(founder.linkedin)}" target="_blank" rel="noreferrer">View profile</a></p>
         </div>
       </article>
-    `).join('');
-
-    setupSlider(founders.length);
+    `;
   }
 
   function renderContact(site) {
@@ -62,45 +68,6 @@
   function setText(id, value) {
     const el = document.getElementById(id);
     if (el) el.textContent = value || '';
-  }
-
-  function setupSlider(total) {
-    if (total <= 1) return;
-
-    const slidesEl = document.getElementById('founder-slides');
-    const dotsEl = document.getElementById('slider-dots');
-    const prevBtn = document.getElementById('slider-prev');
-    const nextBtn = document.getElementById('slider-next');
-    if (!slidesEl || !dotsEl || !prevBtn || !nextBtn) return;
-
-    let index = 0;
-    dotsEl.innerHTML = Array.from({ length: total }).map((_, i) =>
-      `<button class="slider-dot ${i === 0 ? 'active' : ''}" type="button" data-slide="${i}" aria-label="Go to slide ${i + 1}"></button>`
-    ).join('');
-
-    const dots = Array.from(dotsEl.querySelectorAll('.slider-dot'));
-
-    function paint() {
-      slidesEl.style.transform = `translateX(-${index * 100}%)`;
-      dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
-    }
-
-    prevBtn.addEventListener('click', () => {
-      index = (index - 1 + total) % total;
-      paint();
-    });
-
-    nextBtn.addEventListener('click', () => {
-      index = (index + 1) % total;
-      paint();
-    });
-
-    dots.forEach((dot) => {
-      dot.addEventListener('click', () => {
-        index = Number(dot.dataset.slide);
-        paint();
-      });
-    });
   }
 
   function escapeHtml(str) {

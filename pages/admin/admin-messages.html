@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messages - Admin | काम Khoj.com</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="../../css/admin.css">
+  <script>try{if(localStorage.getItem('wfc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+</head>
+<body>
+  <div class="admin-layout" id="admin-layout"></div>
+
+  <script type="module">
+    import { loadScript } from '../../js/firebase-init.js';
+    await loadScript('../../js/data.js');
+    await loadScript('../../js/admin-data.js');
+    await loadScript('../../js/admin.js');
+
+    (function () {
+      requireAdminAuth();
+      seedDataIfEmpty();
+
+      const layout = document.getElementById('admin-layout');
+      layout.innerHTML = adminSidebarHTML('messages') + `
+        <main class="admin-main">
+          ${adminTopbarHTML('Support Messages')}
+          <div class="admin-content">
+            <section class="messages-shell">
+              <header class="messages-shell-head">
+                <div>
+                  <h2>Inbox</h2>
+                  <p>Manage and reply to user messages quickly.</p>
+                </div>
+                <div class="messages-tabs" id="message-filter-tabs">
+                  <button class="messages-tab active" data-filter="all">All</button>
+                  <button class="messages-tab" data-filter="open">Open</button>
+                  <button class="messages-tab" data-filter="closed">Closed</button>
+                </div>
+              </header>
+
+              <div class="messages-board messages-board-redesign">
+                <section class="messages-list-panel">
+                  <div class="messages-list-toolbar">
+                    <input type="text" id="message-search" class="adm-search" placeholder="Search by sender or text...">
+                  </div>
+                  <div class="messages-list" id="messages-list"></div>
+                </section>
+
+                <section class="messages-detail-panel" id="messages-detail"></section>
+              </div>
+            </section>
+          </div>
+        </main>
+      `;
+
+      initAdminCommon();
+
+      const searchEl = document.getElementById('message-search');
+      const tabsWrap = document.getElementById('message-filter-tabs');
+      const listEl = document.getElementById('messages-list');
+      const detailEl = document.getElementById('messages-detail');
+
+      let activeTicketId = null;
+      let activeFilter = 'all';
+
+      function getFilteredQueries() {
+        const text = searchEl.value.trim().toLowerCase();
+
+        return adminGetContactQueries().filter((q) => {
+          const normalizedStatus = q.status === 'closed' ? 'closed' : 'open';
+          const matchesStatus = activeFilter === 'all' || normalizedStatus === activeFilter;
+          if (!matchesStatus) return false;
+
+          if (!text) return true;
+          const hay = [
+            q.id,
+            q.senderName,
+            q.message,
+            ...(Array.isArray(q.replies) ? q.replies.map((r) => r.message) : [])
+          ].join(' ').toLowerCase();
+          return hay.includes(text);
+        });
+      }
+
+      function renderList(queries) {
+        if (!queries.length) {
+          listEl.innerHTML = '<p class="messages-empty">No support tickets found for current filters.</p>';
+          detailEl.innerHTML = '<div class="messages-empty">Select a ticket to see details and reply.</div>';
+          activeTicketId = null;
+          return;
+        }
+
+        if (!activeTicketId || !queries.some((q) => q.id === activeTicketId)) {
+          activeTicketId = queries[0].id;
+        }
+
+        listEl.innerHTML = queries.map((q) => {
+          const active = q.id === activeTicketId ? 'active' : '';
+          const snippet = escHtml((q.message || '').slice(0, 84));
+          const status = escHtml(q.status || 'open');
+          const when = escHtml(adminRelativeTime(q.lastUpdatedAt || q.createdAt));
+          const replyCount = Array.isArray(q.replies) ? q.replies.length : 0;
+          return `
+            <button class="ticket-item ${active}" data-ticket-id="${q.id}">
+              <div class="ticket-item-head">
+                <strong>${escHtml(q.senderName || 'Unknown User')}</strong>
+                <span class="ticket-pill ticket-pill-${status}">${status}</span>
+              </div>
+              <div class="ticket-item-msg">${snippet}${q.message && q.message.length > 90 ? '...' : ''}</div>
+              <div class="ticket-item-foot">
+                <span class="ticket-item-time">${when}</span>
+                <span class="ticket-item-replies">${replyCount} replies</span>
+              </div>
+            </button>
+          `;
+        }).join('');
+
+        listEl.querySelectorAll('[data-ticket-id]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            activeTicketId = btn.getAttribute('data-ticket-id');
+            refresh();
+          });
+        });
+      }
+
+      function renderDetail(query) {
+        if (!query) {
+          detailEl.innerHTML = '<div class="messages-empty">Select a ticket to see details and reply.</div>';
+          return;
+        }
+
+        const replies = Array.isArray(query.replies) ? query.replies : [];
+
+        detailEl.innerHTML = `
+          <div class="ticket-detail-head">
+            <div>
+              <h2>${escHtml(query.senderName || 'Unknown User')}</h2>
+              <p>Support Conversation</p>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="adm-btn adm-btn-ghost" id="close-ticket-btn">Mark Closed</button>
+              <button class="adm-btn adm-btn-danger" id="delete-ticket-btn">Delete</button>
+            </div>
+          </div>
+
+          <div class="ticket-thread" id="ticket-thread"></div>
+
+          <form id="reply-form" class="ticket-reply-form">
+            <label for="reply-text" style="display:block;margin-bottom:8px;color:var(--admin-muted);">Reply</label>
+            <textarea id="reply-text" rows="3" class="adm-form-input" style="width:100%;resize:vertical;" placeholder="Type your response..."></textarea>
+            <div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px;">
+              <button type="submit" class="adm-btn adm-btn-primary">Send Reply</button>
+            </div>
+          </form>
+        `;
+
+        const threadEl = document.getElementById('ticket-thread');
+        threadEl.innerHTML = `
+          <article class="ticket-thread-item ticket-thread-user">
+            <header>${escHtml(query.senderName)} · ${escHtml(adminRelativeTime(query.createdAt))}</header>
+            <p>${escHtml(query.message)}</p>
+          </article>
+          ${replies.map((r) => `
+            <article class="ticket-thread-item ${r.senderType === 'admin' ? 'ticket-thread-admin' : 'ticket-thread-user'}">
+              <header>${escHtml(r.senderName || 'Support')} - ${escHtml(adminRelativeTime(r.createdAt))}</header>
+              <p>${escHtml(r.message)}</p>
+            </article>
+          `).join('')}
+        `;
+
+        document.getElementById('close-ticket-btn').addEventListener('click', () => {
+          const nextStatus = query.status === 'closed' ? 'open' : 'closed';
+          const result = adminSetContactQueryStatus(query.id, nextStatus);
+          if (!result.success) {
+            adminShowToast(result.error || 'Unable to update status', 'error');
+            return;
+          }
+          adminShowToast(nextStatus === 'closed' ? 'Ticket closed.' : 'Ticket reopened.', 'success');
+          refresh();
+        });
+
+        document.getElementById('delete-ticket-btn').addEventListener('click', () => {
+          const ok = window.confirm('Delete this ticket and all replies? This removes it for users too.');
+          if (!ok) return;
+          const result = adminDeleteContactQuery(query.id);
+          if (!result.success) {
+            adminShowToast(result.error || 'Unable to delete ticket', 'error');
+            return;
+          }
+          activeTicketId = null;
+          adminShowToast('Ticket deleted from admin and user side.', 'success');
+          refresh();
+        });
+
+        document.getElementById('reply-form').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const textEl = document.getElementById('reply-text');
+          const message = textEl.value.trim();
+          if (!message) {
+            adminShowToast('Reply cannot be empty', 'error');
+            return;
+          }
+          const result = adminReplyToContactQuery(query.id, message);
+          if (!result.success) {
+            adminShowToast(result.error || 'Reply failed', 'error');
+            return;
+          }
+          textEl.value = '';
+          adminShowToast('Reply sent and stored in Firebase', 'success');
+          refresh();
+        });
+      }
+
+      function refresh() {
+        const allQueries = adminGetContactQueries();
+        const filtered = getFilteredQueries();
+        renderList(filtered);
+        renderDetail(allQueries.find((q) => q.id === activeTicketId));
+      }
+
+      searchEl.addEventListener('input', refresh);
+      tabsWrap.querySelectorAll('[data-filter]').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          tabsWrap.querySelectorAll('[data-filter]').forEach((btn) => btn.classList.remove('active'));
+          tab.classList.add('active');
+          activeFilter = tab.getAttribute('data-filter') || 'all';
+          refresh();
+        });
+      });
+      refresh();
+    })();
+  </script>
+</body>
+</html>
