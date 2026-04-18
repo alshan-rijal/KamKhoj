@@ -63,7 +63,7 @@
       return;
     }
 
-    helperEl.textContent = `You are logged in as ${user.name} (${user.type}). Your ticket stays open until admin replies.`;
+    helperEl.textContent = `You are logged in as ${user.name} (${user.type}). Keep chatting here in the same support thread.`;
     startAutoRefresh();
 
     formEl.addEventListener('submit', (e) => {
@@ -80,7 +80,7 @@
 
       inputEl.value = '';
       paintThread();
-      showToast('Support ticket submitted. Admin will reply here.', 'success');
+      showToast('Message sent in your support thread.', 'success');
     });
 
     function startAutoRefresh() {
@@ -95,9 +95,11 @@
         }
       };
 
+      refreshTick(true);
+
       const intervalId = setInterval(() => {
         refreshTick(false);
-      }, 2500);
+      }, 1200);
 
       window.addEventListener('focus', () => refreshTick(true));
       document.addEventListener('visibilitychange', () => {
@@ -112,7 +114,9 @@
         id: item.id,
         status: item.status,
         updated: item.lastUpdatedAt || item.createdAt,
-        replies: Array.isArray(item.replies) ? item.replies.length : 0
+        replies: Array.isArray(item.replies) ? item.replies.length : 0,
+        adminSeen: item.adminLastSeenAt || '',
+        userSeen: item.userLastSeenAt || ''
       })));
     }
 
@@ -128,27 +132,30 @@
         .reverse()
         .map((item) => {
           const replies = Array.isArray(item.replies) ? item.replies : [];
-          const status = item.status || 'open';
+          const status = normalizeTicketStatus(item.status);
           const topic = formatTopic(item.topic);
           const updatedAt = item.lastUpdatedAt || item.createdAt;
+          const statusLabel = status === 'replied' ? 'replied' : 'not replied';
           return `
             <article class="contact-thread-item">
               <div class="contact-thread-head">
                 <strong>Ticket #${esc(item.id.slice(0, 8))}</strong>
                 <span class="ticket-topic">${esc(topic)}</span>
-                <span class="ticket-status ticket-status-${esc(status)}">${esc(status)}</span>
+                <span class="ticket-status ticket-status-${esc(status)}">${esc(statusLabel)}</span>
               </div>
               <div class="chat-bubble chat-bubble-user">
                 <div>${esc(item.message)}</div>
                 <span>${formatTime(item.createdAt)}</span>
+                <div class="chat-read-indicator">${getAdminSeenText(item)}</div>
               </div>
               ${replies
                 .map(
                   (reply) => `
-                    <div class="chat-bubble chat-bubble-dev">
+                    <div class="chat-bubble ${reply.senderType === 'admin' || reply.senderType === 'developer' ? 'chat-bubble-dev' : 'chat-bubble-user'}">
                       <div class="chat-bubble-author">${esc(reply.senderName || 'Support')}</div>
                       <div>${esc(reply.message)}</div>
                       <span>${formatTime(reply.createdAt)}</span>
+                      <div class="chat-read-indicator">${getReplyReadText(item, reply)}</div>
                     </div>
                   `
                 )
@@ -158,6 +165,48 @@
           `;
         })
         .join('');
+
+      markUserReadIfNeeded(items);
+    }
+
+    function markUserReadIfNeeded(items) {
+      const unread = items.filter(hasUnreadAdminReplyForUser);
+      if (!unread.length) return;
+      unread.forEach((item) => markContactQueryAsSeen(item.id, 'user'));
+    }
+
+    function hasUnreadAdminReplyForUser(item) {
+      const replies = Array.isArray(item.replies) ? item.replies : [];
+      const latestAdminReply = replies
+        .filter((r) => r.senderType === 'admin' || r.senderType === 'developer')
+        .map((r) => new Date(r.createdAt || 0).getTime())
+        .reduce((max, t) => Math.max(max, t), 0);
+      if (!latestAdminReply) return false;
+      const seenAt = new Date(item.userLastSeenAt || 0).getTime();
+      return seenAt < latestAdminReply;
+    }
+
+    function getAdminSeenText(item) {
+      const seen = item.adminLastSeenAt;
+      return seen ? `Seen by admin · ${formatTime(seen)}` : 'Sent';
+    }
+
+    function getUserReadText(item, reply) {
+      const replyTs = new Date(reply.createdAt || 0).getTime();
+      const seenTs = new Date(item.userLastSeenAt || 0).getTime();
+      return seenTs >= replyTs ? 'Read' : 'Delivered';
+    }
+
+    function getReplyReadText(item, reply) {
+      if (reply.senderType === 'admin' || reply.senderType === 'developer') {
+        return getUserReadText(item, reply);
+      }
+      return getAdminSeenText(item);
+    }
+
+    function normalizeTicketStatus(status) {
+      if (status === 'replied' || status === 'closed') return 'replied';
+      return 'not_replied';
     }
   }
 

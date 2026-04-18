@@ -528,6 +528,33 @@ function createContactQuery(data) {
     return { success: false, error: 'Message cannot be empty.' };
   }
 
+  const now = new Date().toISOString();
+  const queries = getContactQueries();
+  const existingIdx = queries.findIndex((q) => q.senderId === sender.id);
+
+  // Keep one support thread per user: subsequent user messages append to the same chat.
+  if (existingIdx !== -1) {
+    const userReply = {
+      id: generateId(),
+      senderType: 'user',
+      senderName: sender.name,
+      message,
+      createdAt: now
+    };
+
+    const existingReplies = Array.isArray(queries[existingIdx].replies) ? queries[existingIdx].replies : [];
+    queries[existingIdx].topic = topic || queries[existingIdx].topic || 'general';
+    queries[existingIdx].replies = [...existingReplies, userReply];
+    queries[existingIdx].status = 'not_replied';
+    queries[existingIdx].adminLastSeenAt = null;
+    queries[existingIdx].lastUpdatedAt = now;
+
+    const updated = queries.splice(existingIdx, 1)[0];
+    queries.unshift(updated);
+    saveContactQueries(queries);
+    return { success: true, query: updated, reusedThread: true };
+  }
+
   const query = {
     id: generateId(),
     senderId: sender.id,
@@ -535,13 +562,14 @@ function createContactQuery(data) {
     senderType: sender.type,
     topic,
     message,
-    createdAt: new Date().toISOString(),
-    lastUpdatedAt: new Date().toISOString(),
-    status: 'open',
+    createdAt: now,
+    lastUpdatedAt: now,
+    adminLastSeenAt: null,
+    userLastSeenAt: now,
+    status: 'not_replied',
     replies: []
   };
 
-  const queries = getContactQueries();
   queries.unshift(query);
   saveContactQueries(queries);
   return { success: true, query };
@@ -567,13 +595,19 @@ function addDeveloperReplyToContactQuery(queryId, message, meta = {}) {
   queries[idx].replies = [...existingReplies, reply];
   queries[idx].status = 'replied';
   queries[idx].lastUpdatedAt = reply.createdAt;
+  if (reply.senderType === 'admin' || reply.senderType === 'developer') {
+    queries[idx].userLastSeenAt = null;
+  }
   saveContactQueries(queries);
   return { success: true, reply };
 }
 
 function updateContactQueryStatus(queryId, status) {
-  const allowed = ['open', 'replied', 'closed'];
-  if (!queryId || !allowed.includes(status)) {
+  const normalized = status === 'open'
+    ? 'not_replied'
+    : (status === 'closed' ? 'replied' : status);
+  const allowed = ['not_replied', 'replied'];
+  if (!queryId || !allowed.includes(normalized)) {
     return { success: false, error: 'Invalid status update.' };
   }
 
@@ -581,7 +615,7 @@ function updateContactQueryStatus(queryId, status) {
   const idx = queries.findIndex((q) => q.id === queryId);
   if (idx === -1) return { success: false, error: 'Query not found.' };
 
-  queries[idx].status = status;
+  queries[idx].status = normalized;
   queries[idx].lastUpdatedAt = new Date().toISOString();
   saveContactQueries(queries);
   return { success: true, query: queries[idx] };
@@ -597,6 +631,26 @@ function deleteContactQuery(queryId) {
   const removed = queries.splice(idx, 1)[0];
   saveContactQueries(queries);
   return { success: true, query: removed };
+}
+
+function markContactQueryAsSeen(queryId, viewerType) {
+  if (!queryId || !['admin', 'user'].includes(viewerType)) {
+    return { success: false, error: 'Invalid seen marker request.' };
+  }
+
+  const queries = getContactQueries();
+  const idx = queries.findIndex((q) => q.id === queryId);
+  if (idx === -1) return { success: false, error: 'Query not found.' };
+
+  const seenAt = new Date().toISOString();
+  if (viewerType === 'admin') {
+    queries[idx].adminLastSeenAt = seenAt;
+  } else {
+    queries[idx].userLastSeenAt = seenAt;
+  }
+
+  saveContactQueries(queries);
+  return { success: true, query: queries[idx] };
 }
 
 function getContactQueriesForUser(userId) {

@@ -36,8 +36,8 @@
                 </div>
                 <div class="messages-tabs" id="message-filter-tabs">
                   <button class="messages-tab active" data-filter="all">All</button>
-                  <button class="messages-tab" data-filter="open">Open</button>
-                  <button class="messages-tab" data-filter="closed">Closed</button>
+                  <button class="messages-tab" data-filter="not_replied">Not Replied</button>
+                  <button class="messages-tab" data-filter="replied">Replied</button>
                 </div>
               </header>
 
@@ -65,12 +65,13 @@
 
       let activeTicketId = null;
       let activeFilter = 'all';
+      let refreshTimer = null;
 
       function getFilteredQueries() {
         const text = searchEl.value.trim().toLowerCase();
 
         return adminGetContactQueries().filter((q) => {
-          const normalizedStatus = q.status === 'closed' ? 'closed' : 'open';
+          const normalizedStatus = normalizeStatus(q.status);
           const matchesStatus = activeFilter === 'all' || normalizedStatus === activeFilter;
           if (!matchesStatus) return false;
 
@@ -100,14 +101,16 @@
         listEl.innerHTML = queries.map((q) => {
           const active = q.id === activeTicketId ? 'active' : '';
           const snippet = escHtml((q.message || '').slice(0, 84));
-          const status = escHtml(q.status || 'open');
+          const status = normalizeStatus(q.status);
+          const statusLabel = status === 'replied' ? 'replied' : 'not replied';
           const when = escHtml(adminRelativeTime(q.lastUpdatedAt || q.createdAt));
           const replyCount = Array.isArray(q.replies) ? q.replies.length : 0;
+          const unread = hasUnreadForAdmin(q) ? '<span class="ticket-unread-dot">New</span>' : '';
           return `
             <button class="ticket-item ${active}" data-ticket-id="${q.id}">
               <div class="ticket-item-head">
-                <strong>${escHtml(q.senderName || 'Unknown User')}</strong>
-                <span class="ticket-pill ticket-pill-${status}">${status}</span>
+                <strong>${escHtml(q.senderName || 'Unknown User')}</strong>${unread}
+                <span class="ticket-pill ticket-pill-${status}">${statusLabel}</span>
               </div>
               <div class="ticket-item-msg">${snippet}${q.message && q.message.length > 90 ? '...' : ''}</div>
               <div class="ticket-item-foot">
@@ -132,6 +135,10 @@
           return;
         }
 
+        if (hasUnreadForAdmin(query)) {
+          adminMarkContactQuerySeen(query.id);
+        }
+
         const replies = Array.isArray(query.replies) ? query.replies : [];
 
         detailEl.innerHTML = `
@@ -141,7 +148,7 @@
               <p>Support Conversation</p>
             </div>
             <div style="display:flex;gap:8px;">
-              <button class="adm-btn adm-btn-ghost" id="close-ticket-btn">Mark Closed</button>
+              <button class="adm-btn adm-btn-ghost" id="toggle-reply-status-btn">${normalizeStatus(query.status) === 'replied' ? 'Mark Not Replied' : 'Mark Replied'}</button>
               <button class="adm-btn adm-btn-danger" id="delete-ticket-btn">Delete</button>
             </div>
           </div>
@@ -162,23 +169,25 @@
           <article class="ticket-thread-item ticket-thread-user">
             <header>${escHtml(query.senderName)} · ${escHtml(adminRelativeTime(query.createdAt))}</header>
             <p>${escHtml(query.message)}</p>
+            <div class="ticket-read-indicator">${query.adminLastSeenAt ? `Read · ${escHtml(adminRelativeTime(query.adminLastSeenAt))}` : 'Unread'}</div>
           </article>
           ${replies.map((r) => `
             <article class="ticket-thread-item ${r.senderType === 'admin' ? 'ticket-thread-admin' : 'ticket-thread-user'}">
               <header>${escHtml(r.senderName || 'Support')} - ${escHtml(adminRelativeTime(r.createdAt))}</header>
               <p>${escHtml(r.message)}</p>
+              ${r.senderType === 'admin' ? `<div class="ticket-read-indicator">${getUserReadStateText(query, r)}</div>` : ''}
             </article>
           `).join('')}
         `;
 
-        document.getElementById('close-ticket-btn').addEventListener('click', () => {
-          const nextStatus = query.status === 'closed' ? 'open' : 'closed';
+        document.getElementById('toggle-reply-status-btn').addEventListener('click', () => {
+          const nextStatus = normalizeStatus(query.status) === 'replied' ? 'not_replied' : 'replied';
           const result = adminSetContactQueryStatus(query.id, nextStatus);
           if (!result.success) {
             adminShowToast(result.error || 'Unable to update status', 'error');
             return;
           }
-          adminShowToast(nextStatus === 'closed' ? 'Ticket closed.' : 'Ticket reopened.', 'success');
+          adminShowToast(nextStatus === 'replied' ? 'Marked as replied.' : 'Marked as not replied.', 'success');
           refresh();
         });
 
@@ -221,6 +230,52 @@
         renderDetail(allQueries.find((q) => q.id === activeTicketId));
       }
 
+      function hasUnreadForAdmin(query) {
+        const seenTs = new Date(query.adminLastSeenAt || 0).getTime();
+        const baseTs = new Date(query.createdAt || 0).getTime();
+        const latestUserReplyTs = (Array.isArray(query.replies) ? query.replies : [])
+          .filter((r) => r.senderType === 'user')
+          .map((r) => new Date(r.createdAt || 0).getTime())
+          .reduce((max, t) => Math.max(max, t), 0);
+        const latestUserTs = Math.max(baseTs, latestUserReplyTs);
+        return seenTs < latestUserTs;
+      }
+
+      function getUserReadStateText(query, reply) {
+        const replyTs = new Date(reply.createdAt || 0).getTime();
+        const userSeenTs = new Date(query.userLastSeenAt || 0).getTime();
+        return userSeenTs >= replyTs ? 'Seen by user' : 'Sent';
+      }
+
+      function normalizeStatus(status) {
+        return status === 'replied' || status === 'closed' ? 'replied' : 'not_replied';
+      }
+
+      async function syncContactQueriesFromFirestore() {
+        if (!window._db || !window._fs || !window._fs.getDoc || !window._fs.doc) return;
+        try {
+          const snapshot = await window._fs.getDoc(window._fs.doc(window._db, 'config', 'contact_queries'));
+          if (!snapshot.exists()) return;
+          const latest = snapshot.data().queries || [];
+          window._wfcContactQueriesCache = latest;
+          localStorage.setItem('wfc_contact_queries', JSON.stringify(latest));
+        } catch (_e) {
+          // silent fallback to cache
+        }
+      }
+
+      async function refreshWithSync(force) {
+        await syncContactQueriesFromFirestore();
+        refresh();
+        if (force) {
+          const active = adminGetContactQueries().find((q) => q.id === activeTicketId);
+          if (active && hasUnreadForAdmin(active)) {
+            adminMarkContactQuerySeen(active.id);
+            refresh();
+          }
+        }
+      }
+
       searchEl.addEventListener('input', refresh);
       tabsWrap.querySelectorAll('[data-filter]').forEach((tab) => {
         tab.addEventListener('click', () => {
@@ -231,6 +286,15 @@
         });
       });
       refresh();
+      refreshWithSync(true);
+      refreshTimer = setInterval(() => refreshWithSync(false), 1200);
+      window.addEventListener('focus', () => refreshWithSync(true));
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refreshWithSync(true);
+      });
+      window.addEventListener('beforeunload', () => {
+        if (refreshTimer) clearInterval(refreshTimer);
+      }, { once: true });
     })();
   </script>
 </body>

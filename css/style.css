@@ -1747,7 +1747,8 @@ p { color: var(--text-muted); }
   text-transform: capitalize;
 }
 
-.ticket-status-open {
+.ticket-status-open,
+.ticket-status-not_replied {
   background: rgba(245, 158, 11, 0.18);
   color: #f7c56e;
 }
@@ -1845,6 +1846,12 @@ p { color: var(--text-muted); }
   font-size: 0.74rem;
   color: #a7a7a7;
   text-align: right;
+}
+
+.chat-read-indicator {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  opacity: 0.75;
 }
 
 .info-card {

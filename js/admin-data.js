@@ -283,6 +283,10 @@ function adminDeleteContactQuery(queryId) {
   return deleteContactQuery(queryId);
 }
 
+function adminMarkContactQuerySeen(queryId) {
+  return markContactQueryAsSeen(queryId, 'admin');
+}
+
 /* ── Activity Log (Firestore + localStorage write-through) ── */
 function getAdminActivity() {
   return window._wfcActivityCache || [];
