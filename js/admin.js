@@ -192,12 +192,12 @@ function initAdminCommon() {
   // Theme toggle
   var themeBtn = document.getElementById('theme-toggle-btn');
   if (themeBtn) {
-    themeBtn.textContent = localStorage.getItem('wfc_theme') === 'light' ? '☀️' : '🌙';
+    themeBtn.setAttribute('aria-checked', localStorage.getItem('wfc_theme') === 'light' ? 'true' : 'false');
     themeBtn.addEventListener('click', function() {
       var light = document.documentElement.getAttribute('data-theme') !== 'light';
       light ? document.documentElement.setAttribute('data-theme', 'light')
             : document.documentElement.removeAttribute('data-theme');
-      themeBtn.textContent = light ? '☀️' : '🌙';
+      themeBtn.setAttribute('aria-checked', light ? 'true' : 'false');
       localStorage.setItem('wfc_theme', light ? 'light' : 'dark');
     });
   }
@@ -276,7 +276,11 @@ function adminTopbarHTML(title) {
       </div>
       <div class="topbar-right">
         <span class="topbar-clock" id="topbar-clock"></span>
-        <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle dark/light mode" title="Toggle dark/light mode" style="position:relative;bottom:auto;right:auto;width:38px;height:38px;font-size:1.1rem;box-shadow:none;border-radius:50%;flex-shrink:0;">🌙</button>
+        <button class="theme-toggle theme-toggle--compact" id="theme-toggle-btn" role="switch" aria-checked="false" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">
+          <span class="theme-toggle-icon theme-toggle-sun" aria-hidden="true">&#9728;</span>
+          <span class="theme-toggle-icon theme-toggle-moon" aria-hidden="true">&#9790;</span>
+          <span class="theme-toggle-knob" aria-hidden="true"></span>
+        </button>
         <div style="position:relative;">
           <div class="topbar-avatar" id="topbar-avatar">SA</div>
           <div class="topbar-dropdown" id="topbar-dropdown">

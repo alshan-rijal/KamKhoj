@@ -291,7 +291,11 @@
     await loadScript('../js/site-pages.js');
     await loadScript('../js/worker.js');
   </script>
-  <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">🌙</button>
-  <script>(function(){var btn=document.getElementById('theme-toggle-btn');if(!btn)return;btn.textContent=localStorage.getItem('wfc_theme')==='light'?'☀️':'🌙';btn.addEventListener('click',function(){var l=document.documentElement.getAttribute('data-theme')!=='light';l?document.documentElement.setAttribute('data-theme','light'):document.documentElement.removeAttribute('data-theme');btn.textContent=l?'☀️':'🌙';localStorage.setItem('wfc_theme',l?'light':'dark');});})();</script>
+  <button class="theme-toggle" id="theme-toggle-btn" role="switch" aria-checked="false" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">
+    <span class="theme-toggle-icon theme-toggle-sun" aria-hidden="true">&#9728;</span>
+    <span class="theme-toggle-icon theme-toggle-moon" aria-hidden="true">&#9790;</span>
+    <span class="theme-toggle-knob" aria-hidden="true"></span>
+  </button>
+  <script>(function(){var btn=document.getElementById('theme-toggle-btn');if(!btn)return;var isLight=localStorage.getItem('wfc_theme')==='light';btn.setAttribute('aria-checked',isLight?'true':'false');btn.addEventListener('click',function(){var l=document.documentElement.getAttribute('data-theme')!=='light';l?document.documentElement.setAttribute('data-theme','light'):document.documentElement.removeAttribute('data-theme');btn.setAttribute('aria-checked',l?'true':'false');localStorage.setItem('wfc_theme',l?'light':'dark');});})();</script>
 </body>
 </html>

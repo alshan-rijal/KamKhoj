@@ -28,6 +28,23 @@
     </div>
   </div>
 
+  <!-- Confirmation Modal -->
+  <div class="adm-modal-overlay" id="modal-confirm">
+    <div class="adm-modal" style="max-width:420px;">
+      <div class="adm-modal-header">
+        <h3 id="confirm-title">Confirm Action</h3>
+        <button class="adm-modal-close" id="confirm-close-btn" aria-label="Close">&times;</button>
+      </div>
+      <div class="adm-modal-body" style="text-align:center;padding:1.75rem;">
+        <p id="confirm-message" style="color:rgba(255,255,255,0.6);margin-bottom:1.5rem;"></p>
+        <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
+          <button class="adm-btn adm-btn-ghost" id="confirm-cancel-btn">Cancel</button>
+          <button class="adm-btn adm-btn-success" id="confirm-ok-btn" style="min-width:140px;">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { loadScript } from '../../js/firebase-init.js';
     await loadScript('../../js/data.js');
@@ -162,6 +179,36 @@
       `;
 
       initAdminCommon();
+
+      // ═══ CONFIRMATION MODAL ═══
+      let confirmAction = null;
+      const confirmModalId = 'modal-confirm';
+      const confirmTitleEl = document.getElementById('confirm-title');
+      const confirmMessageEl = document.getElementById('confirm-message');
+      const confirmOkBtn = document.getElementById('confirm-ok-btn');
+      const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
+      const confirmCloseBtn = document.getElementById('confirm-close-btn');
+
+      function closeConfirmModal() {
+        confirmAction = null;
+        closeModal(confirmModalId);
+      }
+
+      function openConfirmModal({ title, message, confirmText, confirmClass, onConfirm }) {
+        confirmTitleEl.textContent = title || 'Confirm Action';
+        confirmMessageEl.textContent = message || '';
+        confirmOkBtn.textContent = confirmText || 'Confirm';
+        confirmOkBtn.className = `adm-btn ${confirmClass || 'adm-btn-success'}`;
+        confirmAction = typeof onConfirm === 'function' ? onConfirm : null;
+        openModal(confirmModalId);
+      }
+
+      confirmCancelBtn.addEventListener('click', closeConfirmModal);
+      confirmCloseBtn.addEventListener('click', closeConfirmModal);
+      confirmOkBtn.addEventListener('click', () => {
+        if (confirmAction) confirmAction();
+        closeConfirmModal();
+      });
 
       // ═══ LOAD QR SETTINGS ═══
       const settings = adminGetPaymentSettings();
@@ -451,13 +498,20 @@
       };
 
       window.markWorkerPaid = function(taskId) {
-        if (!confirm('Confirm you have paid the worker for this task?')) return;
-        adminUpdateAssignment(taskId, {
-          workerPaymentStatus: 'paid',
-          workerPaidAt: new Date().toISOString()
+        openConfirmModal({
+          title: 'Confirm Worker Payment',
+          message: 'Confirm you have paid the worker for this task?',
+          confirmText: 'Yes, Mark as Paid',
+          confirmClass: 'adm-btn-success',
+          onConfirm: () => {
+            adminUpdateAssignment(taskId, {
+              workerPaymentStatus: 'paid',
+              workerPaidAt: new Date().toISOString()
+            });
+            adminShowToast('Worker marked as paid!', 'success');
+            renderPayments();
+          }
         });
-        adminShowToast('Worker marked as paid!', 'success');
-        renderPayments();
       };
 
       window.viewScreenshot = function(taskId) {
@@ -471,18 +525,25 @@
       };
 
       window.removePaymentHistory = function(taskId) {
-        if (!confirm('Remove this payment record from history? The task assignment will remain but payment data will be cleared.')) return;
-        adminUpdateAssignment(taskId, {
-          paymentStatus: '',
-          paymentMethod: '',
-          paymentScreenshot: '',
-          paymentSubmittedAt: '',
-          paymentVerifiedAt: '',
-          workerPaymentStatus: '',
-          workerPaidAt: ''
+        openConfirmModal({
+          title: 'Remove Payment Record',
+          message: 'Remove this payment record from history? The task assignment will remain but payment data will be cleared.',
+          confirmText: 'Remove',
+          confirmClass: 'adm-btn-danger',
+          onConfirm: () => {
+            adminUpdateAssignment(taskId, {
+              paymentStatus: '',
+              paymentMethod: '',
+              paymentScreenshot: '',
+              paymentSubmittedAt: '',
+              paymentVerifiedAt: '',
+              workerPaymentStatus: '',
+              workerPaidAt: ''
+            });
+            adminShowToast('Payment record removed from history.', 'info');
+            renderPayments();
+          }
         });
-        adminShowToast('Payment record removed from history.', 'info');
-        renderPayments();
       };
 
       renderPayments();

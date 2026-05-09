@@ -51,7 +51,7 @@
         setTimeout(function() {
           if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
         }, 520);
-      }, 1000);
+      }, 2000);
     })();
   </script>
 
@@ -396,7 +396,11 @@
   </footer>
 
   <!-- Dark / Light mode toggle -->
-  <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">🌙</button>
+  <button class="theme-toggle" id="theme-toggle-btn" role="switch" aria-checked="false" aria-label="Toggle dark/light mode" title="Toggle dark/light mode">
+    <span class="theme-toggle-icon theme-toggle-sun" aria-hidden="true">&#9728;</span>
+    <span class="theme-toggle-icon theme-toggle-moon" aria-hidden="true">&#9790;</span>
+    <span class="theme-toggle-knob" aria-hidden="true"></span>
+  </button>
 
   <script type="module">
     import { loadScript } from './js/firebase-init.js';
@@ -420,16 +424,15 @@
       var btn = document.getElementById('theme-toggle-btn');
       if (!btn) return;
       var isLight = localStorage.getItem('wfc_theme') === 'light';
-      btn.textContent = isLight ? '☀️' : '🌙';
+      btn.setAttribute('aria-checked', isLight ? 'true' : 'false');
       btn.addEventListener('click', function() {
         var light = document.documentElement.getAttribute('data-theme') !== 'light';
         if (light) {
           document.documentElement.setAttribute('data-theme', 'light');
-          btn.textContent = '☀️';
         } else {
           document.documentElement.removeAttribute('data-theme');
-          btn.textContent = '🌙';
         }
+        btn.setAttribute('aria-checked', light ? 'true' : 'false');
         localStorage.setItem('wfc_theme', light ? 'light' : 'dark');
       });
     })();
