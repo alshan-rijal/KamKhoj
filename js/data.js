@@ -140,6 +140,22 @@ function clearSession() {
   localStorage.removeItem(DATA_KEYS.session);
 }
 
+/* ── Realtime Data Update Hook ── */
+const DATA_UPDATE_EVENT = 'wfc:data-updated';
+function onWfcDataUpdate(keys, handler) {
+  if (typeof handler !== 'function') return () => {};
+  const keySet = Array.isArray(keys) ? new Set(keys) : (keys ? new Set([keys]) : null);
+  const listener = (event) => {
+    const key = event && event.detail ? event.detail.key : null;
+    if (!keySet || keySet.has(key) || keySet.has('*')) {
+      handler(key, event && event.detail ? event.detail : {});
+    }
+  };
+  window.addEventListener(DATA_UPDATE_EVENT, listener);
+  return () => window.removeEventListener(DATA_UPDATE_EVENT, listener);
+}
+window.onWfcDataUpdate = onWfcDataUpdate;
+
 /* ── User Queries ── */
 function getUserById(id) {
   return getUsers().find(u => u.id === id) || null;

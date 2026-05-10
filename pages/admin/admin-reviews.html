@@ -117,12 +117,17 @@
 
       // Populate worker filter
       const workerSelect = document.getElementById('filter-worker');
-      workerSelect.innerHTML = '<option value="">All Workers</option>';
-      adminGetWorkers().forEach(w => {
-        const opt = document.createElement('option');
-        opt.value = w.id; opt.textContent = w.name;
-        workerSelect.appendChild(opt);
-      });
+      function refreshWorkerFilter() {
+        const current = workerSelect.value;
+        workerSelect.innerHTML = '<option value="">All Workers</option>';
+        adminGetWorkers().forEach(w => {
+          const opt = document.createElement('option');
+          opt.value = w.id; opt.textContent = w.name;
+          workerSelect.appendChild(opt);
+        });
+        if (current) workerSelect.value = current;
+      }
+      refreshWorkerFilter();
 
       // Tabs
       document.querySelectorAll('.adm-tab').forEach(tab => {
@@ -255,6 +260,14 @@
       });
 
       renderReviews();
+
+      if (typeof onWfcDataUpdate === 'function') {
+        onWfcDataUpdate(['users'], () => {
+          refreshWorkerFilter();
+          renderReviews();
+          updateBellBadge();
+        });
+      }
     })();
   </script>
 </body>

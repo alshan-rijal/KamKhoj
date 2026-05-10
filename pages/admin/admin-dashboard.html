@@ -119,17 +119,28 @@
       initAdminCommon();
 
       // ── Stats ──
-      const workers = adminGetWorkers();
-      const clients = adminGetClients();
-      const allReviews = adminGetAllReviews();
-      const avgRating = allReviews.length > 0
-        ? (allReviews.reduce((s, r) => s + r.stars, 0) / allReviews.length)
-        : 0;
+      function renderStats() {
+        const workers = adminGetWorkers();
+        const clients = adminGetClients();
+        const allReviews = adminGetAllReviews();
+        const avgRating = allReviews.length > 0
+          ? (allReviews.reduce((s, r) => s + r.stars, 0) / allReviews.length)
+          : 0;
 
-      adminAnimateCountUp(document.getElementById('stat-workers'), workers.length);
-      adminAnimateCountUp(document.getElementById('stat-clients'), clients.length);
-      adminAnimateCountUp(document.getElementById('stat-reviews'), allReviews.length);
-      adminAnimateCountUp(document.getElementById('stat-avg'), avgRating, 1500, 1);
+        adminAnimateCountUp(document.getElementById('stat-workers'), workers.length);
+        adminAnimateCountUp(document.getElementById('stat-clients'), clients.length);
+        adminAnimateCountUp(document.getElementById('stat-reviews'), allReviews.length);
+        adminAnimateCountUp(document.getElementById('stat-avg'), avgRating, 1500, 1);
+      }
+
+      renderStats();
+
+      if (typeof onWfcDataUpdate === 'function') {
+        onWfcDataUpdate(['users'], () => {
+          renderStats();
+          updateBellBadge();
+        });
+      }
 
 
       // ── Export ──

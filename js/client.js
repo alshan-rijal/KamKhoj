@@ -43,6 +43,24 @@
     renderWorkers();
   }, 600);
 
+  if (typeof onWfcDataUpdate === 'function') {
+    onWfcDataUpdate(['users', 'assignments', 'payment_settings'], () => {
+      const latest = getCurrentUser();
+      if (!latest) {
+        clearSession();
+        window.location.href = '../index.html';
+        return;
+      }
+      client = latest;
+      renderNav();
+      renderNotifications();
+      renderAssignments();
+      if (workersGrid && workersGrid.style.display !== 'none') {
+        renderWorkers();
+      }
+    });
+  }
+
   /* ── Render Nav ── */
   function renderNav() {
     navAvatar.src = getAvatarSrc(client);
@@ -50,21 +68,22 @@
     ddEmail.textContent = client.email;
   }
 
-  /* ── Notifications for completed tasks ── */
+  /* ── Notifications ── */
   function renderNotifications() {
     const container = document.getElementById('notifications-container');
     if (!container) return;
-    const completedTasks = getCompletedUnconfirmedByClient(client.id);
 
-    if (completedTasks.length === 0) {
-      container.innerHTML = '';
-      return;
-    }
+    const allAssignments = getAssignmentsByClient(client.id);
+    const completedTasks = allAssignments.filter(a => a.status === 'completed');
+    const acceptedTasks = allAssignments.filter(a => ['accepted', 'not-started'].includes(a.status));
+    const verifiedPayments = allAssignments.filter(a => a.paymentStatus === 'verified' && ['accepted', 'not-started', 'ongoing'].includes(a.status));
 
-    container.innerHTML = completedTasks.map(task => {
+    const items = [];
+
+    completedTasks.forEach(task => {
       const worker = getUserById(task.workerId);
       const workerName = worker ? escapeHtml(worker.name) : 'A worker';
-      return `
+      items.push(`
         <div class="notification-banner anim-fade-in-up">
           <div class="notification-banner-icon">🔔</div>
           <div class="notification-banner-text">
@@ -75,8 +94,46 @@
             <button class="btn btn-primary btn-sm" onclick="handleConfirmTask('${task.id}')">✅ Confirm Done</button>
           </div>
         </div>
+      `);
+    });
+
+    acceptedTasks.forEach(task => {
+      const worker = getUserById(task.workerId);
+      const workerName = worker ? escapeHtml(worker.name) : 'A worker';
+      items.push(`
+        <div class="notification-banner anim-fade-in-up">
+          <div class="notification-banner-icon">✅</div>
+          <div class="notification-banner-text">
+            <strong>${workerName}</strong> accepted your task "<strong>${escapeHtml(task.title)}</strong>".
+            You can coordinate the start time now.
+          </div>
+        </div>
+      `);
+    });
+
+    verifiedPayments.forEach(task => {
+      items.push(`
+        <div class="notification-banner anim-fade-in-up">
+          <div class="notification-banner-icon">💳</div>
+          <div class="notification-banner-text">
+            Payment for "<strong>${escapeHtml(task.title)}</strong>" has been verified.
+            The worker can start the work.
+          </div>
+        </div>
+      `);
+    });
+
+    if (items.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding:1.5rem;">
+          <div class="empty-state-icon">✅</div>
+          <p class="empty-state-text">You're all caught up. No new notifications.</p>
+        </div>
       `;
-    }).join('');
+      return;
+    }
+
+    container.innerHTML = items.join('');
   }
 
   // Confirm task handler

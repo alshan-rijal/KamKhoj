@@ -331,6 +331,12 @@
       });
 
       renderClients();
+
+      if (typeof onWfcDataUpdate === 'function') {
+        onWfcDataUpdate(['users'], () => {
+          renderClients();
+        });
+      }
     })();
   </script>
 </body>

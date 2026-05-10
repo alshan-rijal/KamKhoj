@@ -65,7 +65,6 @@
 
       let activeTicketId = null;
       let activeFilter = 'all';
-      let refreshTimer = null;
       const replyDrafts = {};
       let lastDetailSignature = '';
 
@@ -341,14 +340,17 @@
       });
       refresh();
       refreshWithSync(true);
-      refreshTimer = setInterval(() => refreshWithSync(false), 1200);
+
+      if (typeof onWfcDataUpdate === 'function') {
+        onWfcDataUpdate(['contact_queries'], () => {
+          refresh();
+        });
+      }
+
       window.addEventListener('focus', () => refreshWithSync(true));
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) refreshWithSync(true);
       });
-      window.addEventListener('beforeunload', () => {
-        if (refreshTimer) clearInterval(refreshTimer);
-      }, { once: true });
     })();
   </script>
 </body>

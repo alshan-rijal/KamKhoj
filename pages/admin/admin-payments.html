@@ -593,6 +593,16 @@
 
       renderWorkerPayments();
 
+      if (typeof onWfcDataUpdate === 'function') {
+        onWfcDataUpdate(['assignments', 'users'], () => {
+          renderPayments();
+          renderWorkerPayments();
+        });
+        onWfcDataUpdate(['payment_settings'], () => {
+          loadQRSettings(adminGetPaymentSettings());
+        });
+      }
+
     })();
   </script>
 </body>

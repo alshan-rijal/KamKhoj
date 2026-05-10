@@ -413,6 +413,13 @@
       });
 
       renderWorkers();
+
+      if (typeof onWfcDataUpdate === 'function') {
+        onWfcDataUpdate(['users'], () => {
+          renderWorkers();
+          updateBellBadge();
+        });
+      }
     })();
   </script>
 </body>

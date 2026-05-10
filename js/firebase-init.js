@@ -5,7 +5,7 @@
    ======================================== */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, getDoc }
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, getDoc, onSnapshot }
   from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -23,7 +23,7 @@ const db = getFirestore(app);
 
 // ── Expose Firestore helpers globally FIRST so writes work even if load fails ──
 window._db = db;
-window._fs = { collection, getDocs, doc, setDoc, deleteDoc, getDoc };
+window._fs = { collection, getDocs, doc, setDoc, deleteDoc, getDoc, onSnapshot };
 
 // ── Fast local cache warm-up (instant first paint) ──
 function readLocalJson(key, fallback) {
@@ -48,6 +48,15 @@ window._wfcAssignmentsCache = assignments;
 window._wfcPaymentSettingsCache = paymentSettings;
 window._wfcActivityCache = activities;
 window._wfcContactQueriesCache = contactQueries;
+
+const DATA_UPDATE_EVENT = 'wfc:data-updated';
+function broadcastDataUpdate(key) {
+  try {
+    window.dispatchEvent(new CustomEvent(DATA_UPDATE_EVENT, { detail: { key } }));
+  } catch (_e) {
+    // ignore event errors
+  }
+}
 
 // ── Firestore refresh (parallel to reduce load latency) ──
 const [usersRes, assignmentsRes, payRes, activityRes, contactRes] = await Promise.allSettled([
@@ -86,6 +95,50 @@ if (contactRes.status === 'fulfilled' && contactRes.value.exists()) {
   contactQueries = contactRes.value.data().queries || [];
   window._wfcContactQueriesCache = contactQueries;
   localStorage.setItem('wfc_contact_queries', JSON.stringify(contactQueries));
+}
+
+// ── Realtime updates (no manual refresh needed) ──
+if (!window._wfcRealtimeInit) {
+  window._wfcRealtimeInit = true;
+
+  onSnapshot(collection(db, 'users'), (snapshot) => {
+    users = snapshot.docs.map((d) => d.data());
+    window._wfcUsersCache = users;
+    localStorage.setItem('wfc_users', JSON.stringify(users));
+    broadcastDataUpdate('users');
+  });
+
+  onSnapshot(collection(db, 'assignments'), (snapshot) => {
+    assignments = snapshot.docs.map((d) => d.data());
+    window._wfcAssignmentsCache = assignments;
+    localStorage.setItem('wfc_assignments', JSON.stringify(assignments));
+    broadcastDataUpdate('assignments');
+  });
+
+  onSnapshot(doc(db, 'config', 'payment_settings'), (snapshot) => {
+    if (snapshot.exists()) {
+      paymentSettings = snapshot.data();
+    } else {
+      paymentSettings = { esewaQR: '', khaltiQR: '', bankQR: '', bankAccountNumber: '', bankName: '', esewaName: '', khaltiName: '' };
+    }
+    window._wfcPaymentSettingsCache = paymentSettings;
+    localStorage.setItem('wfc_payment_settings', JSON.stringify(paymentSettings));
+    broadcastDataUpdate('payment_settings');
+  });
+
+  onSnapshot(doc(db, 'config', 'admin_activity'), (snapshot) => {
+    activities = snapshot.exists() ? (snapshot.data().activities || []) : [];
+    window._wfcActivityCache = activities;
+    localStorage.setItem('wfc_admin_activity', JSON.stringify(activities));
+    broadcastDataUpdate('admin_activity');
+  });
+
+  onSnapshot(doc(db, 'config', 'contact_queries'), (snapshot) => {
+    contactQueries = snapshot.exists() ? (snapshot.data().queries || []) : [];
+    window._wfcContactQueriesCache = contactQueries;
+    localStorage.setItem('wfc_contact_queries', JSON.stringify(contactQueries));
+    broadcastDataUpdate('contact_queries');
+  });
 }
 
 // ── Script loader utility ──

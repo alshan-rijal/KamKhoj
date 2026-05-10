@@ -24,6 +24,7 @@
   const statReviews = document.getElementById('stat-reviews');
   const profileCard = document.getElementById('my-profile-card');
   const reviewsContainer = document.getElementById('reviews-container');
+  const notificationsContainer = document.getElementById('worker-notifications-container');
 
   const editModal = document.getElementById('edit-modal');
   const editModalClose = document.getElementById('edit-modal-close');
@@ -297,6 +298,19 @@
      ══════════════════════════════════════ */
   try { renderAll(); } catch (e) { console.error('renderAll error:', e); }
 
+  if (typeof onWfcDataUpdate === 'function') {
+    onWfcDataUpdate(['users', 'assignments', 'payment_settings'], () => {
+      const latest = getCurrentUser();
+      if (!latest) {
+        clearSession();
+        window.location.href = '../index.html';
+        return;
+      }
+      worker = latest;
+      renderAll();
+    });
+  }
+
   /* ── Render Everything ── */
   function renderAll() {
     worker = getCurrentUser();
@@ -324,6 +338,9 @@
 
     // Profile card
     renderProfileCard();
+
+    // Notifications
+    renderNotifications();
 
     // Tasks
     renderTasks();
@@ -392,6 +409,73 @@
         </div>
       `;
     }).join('');
+  }
+
+  /* ── Notifications ── */
+  function renderNotifications() {
+    if (!notificationsContainer) return;
+
+    const tasks = getAssignmentsByWorker(worker.id);
+    const pendingTasks = tasks.filter(t => t.status === 'pending');
+    const verifiedPayments = tasks.filter(t => t.paymentStatus === 'verified' && ['accepted', 'not-started'].includes(t.status));
+    const paidTasks = tasks.filter(t => t.workerPaymentStatus === 'paid');
+
+    const items = [];
+
+    pendingTasks.forEach(task => {
+      const client = getUserById(task.clientId);
+      const clientName = client ? escapeHtml(client.name) : 'A client';
+      items.push(`
+        <div class="notification-banner anim-fade-in-up">
+          <div class="notification-banner-icon">🆕</div>
+          <div class="notification-banner-text">
+            New task request from <strong>${clientName}</strong>: "<strong>${escapeHtml(task.title)}</strong>".
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0;">
+            <button class="btn btn-primary btn-sm" onclick="handleAcceptTask('${task.id}')">✅ Accept</button>
+            <button class="btn btn-danger btn-sm" onclick="handleRejectTask('${task.id}')">✕ Reject</button>
+          </div>
+        </div>
+      `);
+    });
+
+    verifiedPayments.forEach(task => {
+      const canStart = ['accepted', 'not-started'].includes(task.status);
+      items.push(`
+        <div class="notification-banner anim-fade-in-up">
+          <div class="notification-banner-icon">💳</div>
+          <div class="notification-banner-text">
+            Payment verified for "<strong>${escapeHtml(task.title)}</strong>". You can start the work.
+          </div>
+          ${canStart ? `<div style="display:flex;gap:8px;flex-shrink:0;">
+            <button class="btn btn-primary btn-sm" onclick="handleStatusChange('${task.id}', 'ongoing')">▶ Start Work</button>
+          </div>` : ''}
+        </div>
+      `);
+    });
+
+    paidTasks.forEach(task => {
+      items.push(`
+        <div class="notification-banner anim-fade-in-up">
+          <div class="notification-banner-icon">💰</div>
+          <div class="notification-banner-text">
+            Admin marked you as paid for "<strong>${escapeHtml(task.title)}</strong>".
+          </div>
+        </div>
+      `);
+    });
+
+    if (items.length === 0) {
+      notificationsContainer.innerHTML = `
+        <div class="empty-state" style="padding:1.5rem;">
+          <div class="empty-state-icon">✅</div>
+          <p class="empty-state-text">You're all caught up. No new notifications.</p>
+        </div>
+      `;
+      return;
+    }
+
+    notificationsContainer.innerHTML = items.join('');
   }
 
   /* ══════════════════════════════════════
